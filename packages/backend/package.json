@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "node src/index.js",
     "start": "node src/index.js",
-    "init-db": "node src/db/init.js"
+    "init-db": "node src/db/init.js",
+    "test": "node --test src/**/*.test.js"
   },
   "dependencies": {
     "koa": "^2.14.2",

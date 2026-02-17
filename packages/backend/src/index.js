@@ -7,14 +7,11 @@ import { initDatabase } from './db/database.js';
 const app = new Koa();
 const PORT = process.env.PORT || 3000;
 
-// Initialize database
 initDatabase();
 
-// Middleware
 app.use(cors());
-app.use(bodyParser());
+app.use(bodyParser({ jsonLimit: '20mb' }));
 
-// Error handling
 app.use(async (ctx, next) => {
   try {
     await next();
@@ -28,20 +25,11 @@ app.use(async (ctx, next) => {
   }
 });
 
-// Routes
 app.use(router.routes());
 app.use(router.allowedMethods());
 
-// Start server
 app.listen(PORT, () => {
   console.log(`🚀 OSMAgent Backend running on http://localhost:${PORT}`);
-  console.log(`📊 API Endpoints:`);
-  console.log(`   GET  /health`);
-  console.log(`   GET  /skills`);
-  console.log(`   GET  /skills/:name`);
-  console.log(`   GET  /skills/search/:query`);
-  console.log(`   POST /skills`);
-  console.log(`   PUT  /skills/:name`);
 });
 
 export default app;

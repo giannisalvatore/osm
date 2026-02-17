@@ -7,11 +7,9 @@ const __dirname = dirname(__filename);
 
 const db = new Database(join(__dirname, '../../osm.db'));
 
-// Enable foreign keys
 db.pragma('foreign_keys = ON');
 
 export function initDatabase() {
-  // Skills table
   db.exec(`
     CREATE TABLE IF NOT EXISTS skills (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,17 +30,16 @@ export function initDatabase() {
     )
   `);
 
-  // Users table (optional for MVP)
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT NOT NULL UNIQUE,
       email TEXT,
+      password TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  // User skills tracking
   db.exec(`
     CREATE TABLE IF NOT EXISTS user_skills (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,6 +51,56 @@ export function initDatabase() {
       UNIQUE(user_id, skill_id)
     )
   `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS auth_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS packages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      description TEXT,
+      latest_version TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS package_versions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      package_id INTEGER NOT NULL,
+      version TEXT NOT NULL,
+      manifest TEXT NOT NULL,
+      tarball_path TEXT NOT NULL,
+      shasum TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (package_id) REFERENCES packages(id),
+      UNIQUE(package_id, version)
+    )
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS package_owners (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      package_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (package_id) REFERENCES packages(id),
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      UNIQUE(package_id, user_id)
+    )
+  `);
+
+  db.prepare(`INSERT OR IGNORE INTO users (username, email, password) VALUES (?, ?, ?)`)
+    .run('admin', 'admin@osm.local', 'admin');
 
   console.log('Database initialized successfully');
 }

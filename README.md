@@ -71,7 +71,7 @@ osm install gmail-reader
 ## 👥 Scope: who uses OSM vs who develops OSM
 
 ### 1) Skill users (agents + skill developers)
-- Use the **CLI only** to discover and install skills: `osm list`, `osm search`, `osm install`, `osm info`.
+- Use the **CLI only** to discover and install skills: `osm search`, `osm install`, `osm update`, `osm uninstall`.
 - This is the right scope for:
   - agents that need to run skills;
   - developers that build skills and want to test them locally through OSM.
@@ -121,7 +121,7 @@ npm run dev:frontend
 
 ```bash
 # List available skills
-osm list
+osm search gmail-reader
 
 # Install a skill from registry metadata + GitHub source
 osm install gmail-reader
@@ -136,12 +136,13 @@ osm install gmail-reader
 ### Command Line Interface
 
 ```bash
-osm list                      # List all available skills
-osm search <query>            # Search for skills
-osm install <skill>           # Install a skill
-osm update <skill>            # Update to latest version
-osm remove <skill>            # Uninstall a skill
-osm info <skill>              # Show detailed information
+osm search <query>            # Search packages in registry
+osm install <package>         # Install package (or all deps if omitted)
+osm update <package>          # Update package/dependencies
+osm uninstall <package>       # Uninstall package
+osm publish                   # Publish current package
+osm login <username> <password>
+osm whoami
 ```
 
 ### Web Interface
@@ -156,14 +157,14 @@ Visit **http://localhost:4321** to browse the marketplace:
 ### REST API
 
 ```bash
-# List all skills
-curl http://localhost:3000/skills
+# Search packages
+curl "http://localhost:3000/registry/search?q=gmail"
 
-# Get skill details
-curl http://localhost:3000/skills/gmail-reader
+# Get package metadata
+curl http://localhost:3000/registry/gmail-reader
 
-# Search skills
-curl http://localhost:3000/skills/search/email
+# Download tarball
+curl -L http://localhost:3000/registry/gmail-reader/-/gmail-reader-1.0.0.tgz -o gmail-reader.tgz
 ```
 
 ---
@@ -187,8 +188,8 @@ curl http://localhost:3000/skills/search/email
 │                            │                               │
 │                    ┌───────▼────────┐                      │
 │                    │                │                      │
-│                    │ Local Skills   │                      │
-│                    │ (~/.osm/skills)│                      │
+│                    │ Local Packages │                      │
+│                    │ (./.osm/packages)│                      │
 │                    │                │                      │
 │                    └────────────────┘                      │
 │                                                             │
@@ -338,13 +339,13 @@ osm/
 
 ```bash
 # Test CLI commands
-osm list
-osm search email
+osm search gmail
 osm install gmail-reader
+osm whoami
 
 # Test API
 curl http://localhost:3000/health
-curl http://localhost:3000/skills
+curl "http://localhost:3000/registry/search?q=gmail"
 
 # Test Frontend
 open http://localhost:4321
@@ -453,3 +454,189 @@ Built with inspiration from:
 Made with ❤️ for the AI agent community
 
 </div>
+
+---
+
+## 📦 npm-Style Package Registry (New)
+
+OSM now includes a **centralized registry API** with npm-like metadata and tarball distribution.
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/registry/:name` | `GET` | Package metadata (`dist-tags`, all versions, dependency map) |
+| `/registry/:name/-/:name-:version.tgz` | `GET` | Download a published tarball |
+| `/registry/publish` | `POST` | Publish a new immutable version |
+| `/registry/search?q=<query>` | `GET` | Search package names/descriptions |
+| `/auth/login` | `POST` | Exchange username/password for auth token |
+| `/auth/whoami` | `GET` | Validate current token and return user |
+
+### Version immutability rules
+
+- A published `name@version` can **never be overwritten**.
+- Publishing an existing version returns a conflict error.
+- You must bump the version in `osm.json` for every new release.
+
+### Ownership & token authentication
+
+- First publisher of a package becomes its owner.
+- Only owners can publish new versions of that package.
+- `osm login <username> <password>` stores a local token under `~/.osm/auth.json`.
+
+---
+
+## 🧩 Package Format
+
+### `osm.json` (manifest)
+
+```json
+{
+  "name": "hello-osm",
+  "version": "1.0.0",
+  "description": "Example package",
+  "main": "index.js",
+  "dependencies": {
+    "gmail-reader": "^1.0.0"
+  }
+}
+```
+
+### `osm-lock.json` (lockfile)
+
+Generated during install/update. Pins exact versions + integrity hashes for reproducible installs.
+
+```json
+{
+  "lockfileVersion": 1,
+  "packages": {
+    "gmail-reader": {
+      "version": "1.0.1",
+      "resolved": "http://localhost:3000/registry/gmail-reader/-/gmail-reader-1.0.1.tgz",
+      "integrity": "<sha1>",
+      "dependencies": {}
+    }
+  }
+}
+```
+
+---
+
+## 🗂️ Local install structure and cache
+
+```text
+project/
+├── osm.json
+├── osm-lock.json
+└── .osm/
+    └── packages/
+        └── <package>/
+
+~/.osm/
+├── auth.json
+└── cache/
+    └── <package>@<version>/
+        └── <package>-<version>.tgz
+```
+
+- `./.osm/packages` stores extracted tarballs locally per-project.
+- `~/.osm/cache` stores verified tarballs for faster reinstall + offline fallback.
+- OSM verifies tarball checksum before install.
+
+---
+
+## 🔁 Dependency resolution + lockfile behavior
+
+1. OSM reads `osm.json` dependencies.
+2. Resolves semver ranges against the registry.
+3. Downloads tarballs and verifies checksums.
+4. Installs into `./.osm/packages/<package>`.
+5. Writes pinned versions to `osm-lock.json`.
+
+If registry fetch fails, OSM attempts install from valid local cache.
+
+---
+
+## 🧪 CLI commands (npm-style)
+
+```bash
+osm publish                 # Publish current package from osm.json
+osm install <package>       # Install one package (or run without arg for all deps)
+osm update <package>        # Re-resolve and update package/deps
+osm uninstall <package>     # Remove package from ./.osm/packages
+osm login <username> <password>
+osm whoami
+osm search <query>
+```
+
+### Step-by-step examples
+
+#### Publish
+```bash
+# 1) Authenticate
+osm login admin admin
+
+# 2) Ensure osm.json has name/version/description
+cat osm.json
+
+# 3) Publish immutable version
+osm publish
+```
+
+#### Install + lockfile
+```bash
+# Install one package
+osm install gmail-reader
+
+# Or install all dependencies in osm.json
+osm install
+
+# Verify lockfile generated
+cat osm-lock.json
+```
+
+#### Update
+```bash
+osm update gmail-reader
+```
+
+#### Uninstall
+```bash
+osm uninstall gmail-reader
+```
+
+#### Search and identity
+```bash
+osm search gmail
+osm whoami
+```
+
+---
+
+## 🔐 Security & publishing rules (registry)
+
+- Tarballs are checksum-verified before extraction.
+- Authentication is required for publish.
+- Ownership is enforced server-side.
+- Immutable versions prevent supply-chain overwrite of existing releases.
+- Cached tarballs are re-validated before offline usage.
+
+---
+
+## 🆚 OSM vs npm (quick comparison)
+
+| Capability | npm | OSM |
+|---|---|---|
+| Registry metadata + tarballs | ✅ | ✅ |
+| Lockfile support | ✅ (`package-lock.json`) | ✅ (`osm-lock.json`) |
+| Local cache | ✅ | ✅ (`~/.osm/cache`) |
+| Ownership-protected publish | ✅ | ✅ |
+| AI skill format support | ❌ | ✅ OpenSkills + `SKILL.md` |
+
+---
+
+## 🔮 Extended roadmap (optional)
+
+- Scoped packages (`@scope/name`)
+- Token revocation + expiration
+- Provenance signatures (Sigstore/SLSA)
+- Delta updates for large tarballs
+- Private registries + mirrors

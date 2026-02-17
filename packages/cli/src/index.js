@@ -2,14 +2,13 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { listCommand } from './commands/list.js';
 import { searchCommand } from './commands/search.js';
 import { installCommand } from './commands/install.js';
 import { updateCommand } from './commands/update.js';
 import { removeCommand } from './commands/remove.js';
-import { infoCommand } from './commands/info.js';
-import { createCommand } from './commands/create.js';
 import { publishCommand } from './commands/publish.js';
+import { loginCommand } from './commands/login.js';
+import { whoamiCommand } from './commands/whoami.js';
 
 const program = new Command();
 
@@ -18,65 +17,18 @@ program
   .description('osm - Open Skills Manager')
   .version('1.0.0');
 
-// List command
-program
-  .command('list')
-  .alias('ls')
-  .description('List all available skills')
-  .action(listCommand);
+program.command('search <query>').description('Search for packages by name or description').action(searchCommand);
+program.command('install [package]').alias('i').description('Install dependencies or a package').action(installCommand);
+program.command('update [package]').alias('u').description('Update dependencies or a package').action(updateCommand);
+program.command('uninstall <package>').alias('remove').alias('rm').description('Uninstall a package').action(removeCommand);
+program.command('publish').description('Publish package from current folder').action(publishCommand);
+program.command('login <username> <password>').description('Authenticate and store local token').action(loginCommand);
+program.command('whoami').description('Show current authenticated user').action(whoamiCommand);
 
-// Search command
-program
-  .command('search <query>')
-  .description('Search for skills by name or description')
-  .action(searchCommand);
-
-// Install command
-program
-  .command('install <skill>')
-  .alias('i')
-  .description('Install a skill from the registry')
-  .action(installCommand);
-
-// Update command
-program
-  .command('update <skill>')
-  .alias('u')
-  .description('Update an installed skill to the latest version')
-  .action(updateCommand);
-
-// Remove command
-program
-  .command('remove <skill>')
-  .alias('rm')
-  .description('Remove an installed skill')
-  .action(removeCommand);
-
-// Info command
-program
-  .command('info <skill>')
-  .description('Show detailed information about a skill')
-  .action(infoCommand);
-
-// Create command
-program
-  .command('create <skill>')
-  .alias('new')
-  .description('Create a new empty skill')
-  .action(createCommand);
-
-// Publish command
-program
-  .command('publish [path]')
-  .description('Publish a skill')
-  .action(publishCommand);
-
-// Welcome banner
 if (process.argv.length === 2) {
-  console.log(chalk.bold.cyan('\n🚀 osm - Open Skills Manager\n'));
+  console.log(chalk.bold.cyan('\n🚀 osm - Open Skills Manager 1.0.0\n'));
   console.log('Run ' + chalk.yellow('osm --help') + ' to see available commands\n');
   process.exit(0);
 }
 
 program.parse();
-

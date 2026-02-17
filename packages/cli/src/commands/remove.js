@@ -1,30 +1,26 @@
 import chalk from 'chalk';
 import ora from 'ora';
-import { isSkillInstalled, removeSkill as removeSkillStorage } from '../utils/storage.js';
+import fs from 'fs-extra';
+import { getPackageInstallPath } from '../config.js';
+import { readLockfile, writeLockfile } from '../utils/lockfile.js';
 
-export async function removeCommand(skillName) {
-  if (!skillName) {
-    console.log(chalk.red('Please provide a skill name'));
-    console.log(chalk.gray('Usage: osm rm <skill-name>'));
+export async function removeCommand(packageName) {
+  if (!packageName) {
+    console.log(chalk.red('Please provide a package name'));
     return;
   }
 
-  const spinner = ora(`Removing ${skillName}...`).start();
-
+  const spinner = ora(`Uninstalling ${packageName}...`).start();
   try {
-    // Check if skill is installed
-    if (!await isSkillInstalled(skillName)) {
-      spinner.fail(`${skillName} is not installed`);
-      return;
+    await fs.remove(getPackageInstallPath(packageName));
+    const lock = await readLockfile();
+    if (lock.packages?.[packageName]) {
+      delete lock.packages[packageName];
+      await writeLockfile(lock);
     }
-
-    // Remove skill directory
-    await removeSkillStorage(skillName);
-
-    spinner.succeed(chalk.green(`Successfully removed ${skillName}`));
-
+    spinner.succeed(`Uninstalled ${packageName}`);
   } catch (error) {
-    spinner.fail(`Failed to remove ${skillName}`);
-    console.error(chalk.red(error.message));
+    spinner.fail('Uninstall failed');
+    console.log(chalk.red(error.message));
   }
 }
