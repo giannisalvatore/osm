@@ -32,4 +32,9 @@ export async function incrementDownloads(name) {
   }
 }
 
+export async function createSkill(skillData) {
+  const response = await api.post('/skills', skillData);
+  return response.data;
+}
+
 export default api;
