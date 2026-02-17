@@ -68,23 +68,41 @@ osm install gmail-reader
 ---
 
 
-## 👥 Who uses OSM
+## 👥 Scope: who uses OSM vs who develops OSM
 
-- **Agents as consumers**: use `osm list`, `osm search`, `osm install`, and `osm info` to discover and install skills from the registry.
-- **Users/agents as creators**: create skill repositories on GitHub, maintain `SKILL.md`, and publish metadata (`name`, `description`, `repository`, permissions, dependencies) to OSM.
-- **Local machine responsibility**: OSM stores skill source files + install metadata locally, so agents can execute skills directly after install.
+### 1) Skill users (agents + skill developers)
+- Use the **CLI only** to discover and install skills: `osm list`, `osm search`, `osm install`, `osm info`.
+- This is the right scope for:
+  - agents that need to run skills;
+  - developers that build skills and want to test them locally through OSM.
+
+### 2) OSM developers (CLI/backend/frontend maintainers)
+- Work on the OSM codebase itself (`packages/cli`, `packages/backend`, `packages/frontend`).
+- Run local services, contribute code, and maintain the platform.
+
+**Local machine responsibility**: OSM stores skill source files + install metadata locally, so agents can execute skills directly after install.
 
 ---
 ## 🚀 Quick Start
 
 ### Installation
 
+#### Option A — clone and install (recommended for OSM developers)
+
 ```bash
 # Clone and setup
-git clone https://github.com/yourusername/osm.git
+git clone https://github.com/giannisalvatore/osm.git
 cd osm
-./quickstart.sh
+./install.sh
 ```
+
+#### Option B — one-line install (recommended for skill users)
+
+```bash
+curl -fsSL https://www.osmagent.com/install.sh | bash
+```
+
+> Note: use `bash` (not `sh`) so the installer runs with the expected shell features.
 
 ### Start Services
 
