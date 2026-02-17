@@ -1,0 +1,144 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+
+const { name } = Astro.params;
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+
+let skill = null;
+let error = null;
+
+try {
+  const response = await fetch(`${API_URL}/skills/${name}`);
+  const data = await response.json();
+  skill = data.skill;
+} catch (e) {
+  error = 'Skill not found or unable to connect to API';
+}
+
+export async function getStaticPaths() {
+  return [];
+}
+---
+
+<Layout title={skill ? `${skill.name} - OSMAgent` : 'Skill Not Found'}>
+  <Header />
+  
+  <main class="max-w-4xl mx-auto px-6 lg:px-8 py-24">
+    {error ? (
+      <div class="border border-red-200 rounded-lg p-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Error</h1>
+        <p class="text-gray-600">{error}</p>
+        <a href="/" class="text-gray-900 hover:text-gray-600 mt-6 inline-block transition-colors">← Back</a>
+      </div>
+    ) : skill ? (
+      <>
+        <div class="mb-8">
+          <a href="/" class="text-gray-500 hover:text-gray-900 transition-colors text-sm">← Back to all skills</a>
+        </div>
+
+        <div class="pb-12 border-b border-gray-100 mb-12">
+          <div class="flex items-start justify-between mb-8">
+            <div>
+              <h1 class="text-5xl font-bold text-gray-900 mb-4 tracking-tight">{skill.name}</h1>
+              <p class="text-xl text-gray-600 leading-relaxed">{skill.description}</p>
+            </div>
+            {skill.ai_verified && (
+              <svg class="w-8 h-8 text-indigo-600 flex-shrink-0 ml-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+            )}
+          </div>
+
+          <div class="flex flex-wrap gap-8 text-sm text-gray-600">
+            <div>
+              <span class="text-gray-900 font-medium">Version</span>
+              <div class="mt-1">{skill.version}</div>
+            </div>
+            <div>
+              <span class="text-gray-900 font-medium">Author</span>
+              <div class="mt-1">{skill.author}</div>
+            </div>
+            <div>
+              <span class="text-gray-900 font-medium">Category</span>
+              <div class="mt-1">{skill.category}</div>
+            </div>
+            <div>
+              <span class="text-gray-900 font-medium">Downloads</span>
+              <div class="mt-1">{skill.downloads.toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+
+        {skill.repository && (
+          <div class="mb-12">
+            <a href={skill.repository} target="_blank" class="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors text-sm">
+              <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+              </svg>
+              View source on GitHub →
+            </a>
+          </div>
+        )}
+
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-8 mb-12">
+          <h2 class="text-2xl font-bold mb-4 tracking-tight">Install</h2>
+          <div class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4">
+            <code class="font-mono text-sm">osm install {skill.name}</code>
+            <button 
+              onclick={`navigator.clipboard.writeText('osm install ${skill.name}').then(() => { event.target.textContent = 'Copied!'; setTimeout(() => event.target.textContent = 'Copy', 2000); })`}
+              class="px-4 py-2 bg-gray-900 text-white text-sm rounded-md hover:bg-gray-800 transition-colors"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+
+        {skill.permissions && skill.permissions.length > 0 && (
+          <div class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 tracking-tight">Required Permissions</h2>
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+              <ul class="space-y-3">
+                {skill.permissions.map((perm) => (
+                  <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <code class="text-sm font-mono text-yellow-900">{perm}</code>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {skill.dependencies && Object.keys(skill.dependencies).length > 0 && (
+          <div class="mb-12">
+            <h2 class="text-2xl font-bold mb-6 tracking-tight">Dependencies</h2>
+            <div class="border border-gray-200 rounded-lg divide-y divide-gray-100">
+              {Object.entries(skill.dependencies).map(([name, version]) => (
+                <div class="flex items-center justify-between p-4">
+                  <code class="text-sm font-mono text-gray-900">{name}</code>
+                  <span class="text-sm text-gray-500 font-mono">{version}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </>
+    ) : null}
+  </main>
+
+  <footer class="border-t border-gray-100 mt-24">
+    <div class="max-w-6xl mx-auto px-6 lg:px-8 py-12">
+      <div class="flex justify-between items-center text-sm text-gray-500">
+        <p>© 2026 OSMAgent</p>
+        <div class="flex gap-8">
+          <a href="/" class="hover:text-gray-900 transition-colors">Skills</a>
+          <a href="/docs" class="hover:text-gray-900 transition-colors">Docs</a>
+          <a href="https://github.com/osmteam/osm" target="_blank" class="hover:text-gray-900 transition-colors">GitHub</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</Layout>

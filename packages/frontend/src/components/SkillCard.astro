@@ -1,0 +1,54 @@
+---
+const { skill } = Astro.props;
+const isVerified = skill.ai_verified;
+---
+
+<div class="group border border-gray-100 rounded-lg p-6 hover:border-gray-300 transition-all">
+  <div class="flex items-start justify-between mb-4">
+    <div class="flex-1">
+      <div class="flex items-center gap-3 mb-2">
+        <h3 class="text-lg font-semibold text-gray-900">{skill.name}</h3>
+        {isVerified && (
+          <svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+          </svg>
+        )}
+      </div>
+      
+      <p class="text-gray-600 text-sm leading-relaxed mb-4">{skill.description}</p>
+      
+      <div class="flex items-center gap-4 text-xs text-gray-500">
+        <span>{skill.author}</span>
+        <span>•</span>
+        <span>v{skill.version}</span>
+        <span>•</span>
+        <span>{skill.downloads.toLocaleString()} downloads</span>
+      </div>
+    </div>
+  </div>
+  
+  <div class="flex gap-3 mt-4 pt-4 border-t border-gray-50">
+    <a 
+      href={`/skill/${skill.name}`}
+      class="flex-1 text-center bg-gray-900 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
+    >
+      View
+    </a>
+    
+    <button 
+      onclick={`copyInstallCommand('${skill.name}')`}
+      class="border border-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:border-gray-300 hover:bg-gray-50 transition-colors"
+    >
+      Copy Install
+    </button>
+  </div>
+</div>
+
+<script is:inline>
+  function copyInstallCommand(skillName) {
+    const command = `osm i ${skillName}`;
+    navigator.clipboard.writeText(command).then(() => {
+      alert(`Copied: ${command}`);
+    });
+  }
+</script>

@@ -1,0 +1,31 @@
+sources:
+  # Technology
+  - name: TechCrunch
+    url: https://techcrunch.com/feed/
+    category: technology
+    
+  - name: The Verge
+    url: https://www.theverge.com/rss/index.xml
+    category: technology
+    
+  - name: Hacker News
+    url: https://news.ycombinator.com/rss
+    category: technology
+    
+  # Science
+  - name: Science Daily
+    url: https://www.sciencedaily.com/rss/all.xml
+    category: science
+    
+  - name: Nature News
+    url: https://www.nature.com/nature.rss
+    category: science
+    
+  # Business
+  - name: Bloomberg
+    url: https://www.bloomberg.com/feed/podcast/bloomberg-technology.xml
+    category: business
+    
+  - name: TechMeme
+    url: https://www.techmeme.com/feed.xml
+    category: technology

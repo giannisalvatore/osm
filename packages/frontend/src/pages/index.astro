@@ -1,0 +1,178 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import SkillCard from '../components/SkillCard.astro';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+
+let skills = [];
+let error = null;
+
+try {
+  const response = await fetch(`${API_URL}/skills`);
+  const data = await response.json();
+  skills = data.skills || [];
+} catch (e) {
+  error = 'Unable to connect to the OSMAgent API. Please ensure the backend is running.';
+  console.error('API Error:', e);
+}
+---
+
+<Layout title="OSMAgent - Open Skills Marketplace">
+  <Header currentPath="/" />
+  
+  <main>
+    <!-- Hero Section -->
+    <div class="max-w-6xl mx-auto px-6 lg:px-8 py-24">
+      <div class="max-w-3xl">
+        <h1 class="text-5xl md:text-7xl font-bold text-gray-900 mb-6 tracking-tight leading-tight">
+          Essential skills for&nbsp;AI&nbsp;agents
+        </h1>
+        <p class="text-xl md:text-2xl text-gray-600 mb-12 leading-relaxed">
+          Open marketplace for verified, production-ready capabilities. Install with one command.
+        </p>
+        
+        <!-- Search Bar -->
+        <div class="relative mb-8">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search skills..."
+            class="w-full px-6 py-4 text-lg border border-gray-200 rounded-lg focus:outline-none focus:border-gray-400 transition-colors"
+          />
+          <svg class="absolute right-6 top-5 w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+
+        <div class="text-sm text-gray-500">
+          {skills.length} {skills.length === 1 ? 'skill' : 'skills'} available
+        </div>
+      </div>
+    </div>
+
+    {error ? (
+      <div class="max-w-6xl mx-auto px-6 lg:px-8 mb-12">
+        <div class="border border-red-200 rounded-lg p-4">
+          <p class="text-red-800 text-sm">{error}</p>
+        </div>
+      </div>
+    ) : null}
+
+    <!-- Skills Grid -->
+    <div class="max-w-6xl mx-auto px-6 lg:px-8 pb-24">
+      <div id="skillsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {skills.map((skill) => (
+          <SkillCard skill={skill} />
+        ))}
+      </div>
+
+      {skills.length === 0 && !error && (
+        <div class="text-center py-24">
+          <p class="text-gray-500">No skills available yet</p>
+        </div>
+      )}
+    </div>
+
+    <!-- Installation Guide -->
+    <div id="install" class="border-t border-gray-100">
+      <div class="max-w-6xl mx-auto px-6 lg:px-8 py-24">
+        <div class="max-w-3xl">
+          <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6 tracking-tight">
+            Get started
+          </h2>
+          <p class="text-lg text-gray-600 mb-8">
+            Install the OSM CLI to manage skills from your terminal
+          </p>
+          
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8 font-mono">
+            <div class="flex items-center justify-between">
+              <code class="text-sm text-gray-900">npm install -g osm-cli</code>
+              <button 
+                onclick="copyToClipboard('npm install -g osm-cli')" 
+                class="ml-4 px-4 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-900 mb-2">List all skills</h3>
+              <code class="text-sm text-gray-600 font-mono">osm list</code>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-gray-900 mb-2">Search skills</h3>
+              <code class="text-sm text-gray-600 font-mono">osm search &lt;query&gt;</code>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-gray-900 mb-2">Install a skill</h3>
+              <code class="text-sm text-gray-600 font-mono">osm install &lt;name&gt;</code>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-gray-900 mb-2">Update a skill</h3>
+              <code class="text-sm text-gray-600 font-mono">osm update &lt;name&gt;</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-gray-100">
+    <div class="max-w-6xl mx-auto px-6 lg:px-8 py-12">
+      <div class="flex justify-between items-center text-sm text-gray-500">
+        <p>© 2026 OSMAgent</p>
+        <div class="flex gap-8">
+          <a href="/docs" class="hover:text-gray-900 transition-colors">Docs</a>
+          <a href="https://github.com/osmteam/osm" target="_blank" class="hover:text-gray-900 transition-colors">GitHub</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</Layout>
+
+<script>
+  // Search functionality
+  const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+  const skillsContainer = document.getElementById('skillsContainer');
+  
+  if (searchInput && skillsContainer) {
+    searchInput.addEventListener('input', (e) => {
+      const query = (e.target as HTMLInputElement).value.toLowerCase();
+      const skillCards = skillsContainer.children;
+      
+      Array.from(skillCards).forEach((card) => {
+        const text = card.textContent?.toLowerCase() || '';
+        const shouldShow = text.includes(query);
+        (card as HTMLElement).style.display = shouldShow ? 'block' : 'none';
+      });
+    });
+  }
+
+  // Copy to clipboard
+  (window as any).copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event?.target as HTMLButtonElement;
+      const originalText = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => {
+        btn.textContent = originalText;
+      }, 2000);
+    });
+  };
+
+  // Copy install command
+  (window as any).copyInstallCommand = (skillName: string) => {
+    const command = `osm install ${skillName}`;
+    navigator.clipboard.writeText(command).then(() => {
+      const btn = event?.target as HTMLButtonElement;
+      const originalText = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => {
+        btn.textContent = originalText;
+      }, 2000);
+    });
+  };
+</script>

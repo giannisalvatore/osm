@@ -1,0 +1,185 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+---
+
+<Layout title="Documentation - OSMAgent">
+  <Header currentPath="/docs" />
+  
+  <main class="max-w-4xl mx-auto px-6 lg:px-8 py-24">
+    <h1 class="text-5xl font-bold mb-16 tracking-tight">Documentation</h1>
+
+    <div class="space-y-24">
+      <section>
+        <h2 class="text-3xl font-bold mb-8 tracking-tight">Getting Started</h2>
+        
+        <h3 class="text-xl font-semibold mb-4">Installation</h3>
+        <p class="text-gray-600 mb-4 leading-relaxed">Install the OSM CLI globally using npm:</p>
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 font-mono text-sm">
+          <code>npm install -g osm-cli</code>
+        </div>
+        
+        <p class="text-gray-600 mb-4 leading-relaxed">Or install from source:</p>
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 font-mono text-sm">
+          <code>git clone https://github.com/osmteam/osm<br/>cd osm<br/>./install.sh</code>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-3xl font-bold mb-8 tracking-tight">CLI Commands</h2>
+        
+        <div class="space-y-8">
+          <div>
+            <h3 class="text-lg font-semibold mb-2">osm list</h3>
+            <p class="text-gray-600 mb-3 text-sm">List all available skills in the OSMAgent registry</p>
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 font-mono text-sm">
+              <code>osm list</code>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-semibold mb-2">osm search &lt;query&gt;</h3>
+            <p class="text-gray-600 mb-3 text-sm">Search for skills by name or description</p>
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 font-mono text-sm">
+              <code>osm search email<br/>osm search budget</code>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-semibold mb-2">osm install &lt;skill&gt;</h3>
+            <p class="text-gray-600 mb-3 text-sm">Install a skill from the registry</p>
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 font-mono text-sm">
+              <code>osm install gmail-reader<br/>osm i budget-analyzer</code>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-semibold mb-2">osm update &lt;skill&gt;</h3>
+            <p class="text-gray-600 mb-3 text-sm">Update a skill to the latest version</p>
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 font-mono text-sm">
+              <code>osm update gmail-reader<br/>osm u gmail-reader</code>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-semibold mb-2">osm remove &lt;skill&gt;</h3>
+            <p class="text-gray-600 mb-3 text-sm">Remove an installed skill</p>
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 font-mono text-sm">
+              <code>osm remove gmail-reader<br/>osm rm gmail-reader</code>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-semibold mb-2">osm info &lt;skill&gt;</h3>
+            <p class="text-gray-600 mb-3 text-sm">Show detailed information about a skill</p>
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 font-mono text-sm">
+              <code>osm info gmail-reader</code>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-3xl font-bold mb-8 tracking-tight">Skill Manifest (SKILL.md)</h2>
+        <p class="text-gray-600 mb-4 leading-relaxed">Each skill contains a <code class="bg-gray-100 px-2 py-1 rounded text-sm">SKILL.md</code> file with YAML frontmatter:</p>
+        
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 font-mono text-sm overflow-x-auto">
+          <code set:html={`---
+name: budget-analyzer
+version: 1.0.0
+description: Analyze your expenses and subscriptions
+author: MarioDev
+repository: https://github.com/MarioDev/budget-analyzer
+permissions:
+  - read_finance
+  - read_calendar
+dependencies:
+  axios: ^1.5.0
+---
+
+# Budget Analyzer
+
+Automatically analyze your financial data...`} />
+        </div>
+
+        <h3 class="text-xl font-semibold mb-4 mt-8">Manifest Fields</h3>
+        <div class="space-y-3 text-sm">
+          <div><span class="font-semibold">name:</span> <span class="text-gray-600">Unique skill identifier</span></div>
+          <div><span class="font-semibold">version:</span> <span class="text-gray-600">Semantic version (semver)</span></div>
+          <div><span class="font-semibold">description:</span> <span class="text-gray-600">Brief description of functionality</span></div>
+          <div><span class="font-semibold">author:</span> <span class="text-gray-600">Skill author</span></div>
+          <div><span class="font-semibold">repository:</span> <span class="text-gray-600">GitHub repository URL</span></div>
+          <div><span class="font-semibold">permissions:</span> <span class="text-gray-600">Required permissions</span></div>
+          <div><span class="font-semibold">dependencies:</span> <span class="text-gray-600">npm dependencies</span></div>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-3xl font-bold mb-8 tracking-tight">Publishing Skills</h2>
+        <p class="text-gray-600 mb-6 leading-relaxed">To publish a new skill to the OSMAgent registry:</p>
+        
+        <ol class="space-y-4 text-sm">
+          <li class="flex gap-4">
+            <span class="font-semibold text-gray-900 flex-shrink-0">1.</span>
+            <span class="text-gray-600">Create a GitHub repository for your skill</span>
+          </li>
+          <li class="flex gap-4">
+            <span class="font-semibold text-gray-900 flex-shrink-0">2.</span>
+            <span class="text-gray-600">Add a <code class="bg-gray-100 px-2 py-1 rounded">SKILL.md</code> file in the root</span>
+          </li>
+          <li class="flex gap-4">
+            <span class="font-semibold text-gray-900 flex-shrink-0">3.</span>
+            <span class="text-gray-600">Implement the skill logic</span>
+          </li>
+          <li class="flex gap-4">
+            <span class="font-semibold text-gray-900 flex-shrink-0">4.</span>
+            <span class="text-gray-600">Use the API POST /skills to register it</span>
+          </li>
+        </ol>
+      </section>
+
+      <section>
+        <h2 class="text-3xl font-bold mb-8 tracking-tight">API Endpoints</h2>
+        
+        <div class="space-y-6">
+          <div>
+            <code class="text-sm font-mono bg-gray-100 px-3 py-1 rounded">GET /skills</code>
+            <p class="text-gray-600 mt-2 text-sm">List all available skills</p>
+          </div>
+
+          <div>
+            <code class="text-sm font-mono bg-gray-100 px-3 py-1 rounded">GET /skills/:name</code>
+            <p class="text-gray-600 mt-2 text-sm">Get details of a specific skill</p>
+          </div>
+
+          <div>
+            <code class="text-sm font-mono bg-gray-100 px-3 py-1 rounded">GET /skills/search/:query</code>
+            <p class="text-gray-600 mt-2 text-sm">Search for skills</p>
+          </div>
+
+          <div>
+            <code class="text-sm font-mono bg-gray-100 px-3 py-1 rounded">POST /skills</code>
+            <p class="text-gray-600 mt-2 text-sm">Publish a new skill</p>
+          </div>
+
+          <div>
+            <code class="text-sm font-mono bg-gray-100 px-3 py-1 rounded">PUT /skills/:name</code>
+            <p class="text-gray-600 mt-2 text-sm">Update an existing skill</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="border-t border-gray-100 mt-24">
+    <div class="max-w-6xl mx-auto px-6 lg:px-8 py-12">
+      <div class="flex justify-between items-center text-sm text-gray-500">
+        <p>© 2026 OSMAgent</p>
+        <div class="flex gap-8">
+          <a href="/" class="hover:text-gray-900 transition-colors">Skills</a>
+          <a href="https://github.com/osmteam/osm" target="_blank" class="hover:text-gray-900 transition-colors">GitHub</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</Layout>

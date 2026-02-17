@@ -1,0 +1,24 @@
+{
+  "name": "osm-monorepo",
+  "version": "1.0.0",
+  "description": "OSMAgent - Open Skills Marketplace",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=@osm/backend",
+    "dev:frontend": "npm run dev --workspace=@osm/frontend",
+    "dev:cli": "npm run dev --workspace=osm-cli",
+    "build:all": "npm run build --workspaces",
+    "install:cli": "npm install -g ./packages/cli"
+  },
+  "keywords": [
+    "osm",
+    "skills",
+    "marketplace",
+    "ai"
+  ],
+  "author": "OSMAgent",
+  "license": "MIT"
+}
