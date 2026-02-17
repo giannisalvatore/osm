@@ -1,9 +1,13 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import fs from 'fs-extra';
+import { promisify } from 'util';
+import { execFile } from 'child_process';
 import { fetchSkill, incrementDownloads } from '../utils/api.js';
 import { ensureOSMDir, isSkillInstalled, saveSkillManifest } from '../utils/storage.js';
 import { getSkillPath } from '../config.js';
+
+const execFileAsync = promisify(execFile);
 
 export async function installCommand(skillName) {
   if (!skillName) {
@@ -17,24 +21,31 @@ export async function installCommand(skillName) {
   try {
     await ensureOSMDir();
 
-    // Check if already installed
     if (await isSkillInstalled(skillName)) {
       spinner.warn(`${skillName} is already installed`);
       console.log(chalk.gray(`Use 'osm u ${skillName}' to update`));
       return;
     }
 
-    // Fetch skill info from registry
     const data = await fetchSkill(skillName);
     const skill = data.skill;
 
-    spinner.text = `Installing ${skillName} v${skill.version}...`;
+    spinner.text = `Downloading ${skillName} v${skill.version} from GitHub...`;
 
-    // Create skill directory
+    if (!skill.repository) {
+      throw new Error('Skill repository URL is missing');
+    }
+
     const skillPath = getSkillPath(skillName);
-    await fs.ensureDir(skillPath);
+    await fs.remove(skillPath);
 
-    // Save manifest as SKILL.json
+    try {
+      await execFileAsync('git', ['clone', '--depth', '1', skill.repository, skillPath]);
+    } catch (cloneError) {
+      await fs.remove(skillPath);
+      throw new Error(`Unable to clone repository: ${cloneError.stderr || cloneError.message}`);
+    }
+
     const manifest = {
       name: skill.name,
       version: skill.version,
@@ -48,78 +59,21 @@ export async function installCommand(skillName) {
     };
 
     await saveSkillManifest(skillName, manifest);
-
-    // Create a basic entry point file
-    const entrypointPath = `${skillPath}/${skill.entrypoint}`;
-    const entrypointContent = `// ${skill.name} v${skill.version}
-// ${skill.description}
-// Author: ${skill.author}
-
-console.log('${skill.name} skill loaded!');
-
-export default {
-  name: '${skill.name}',
-  version: '${skill.version}',
-  execute: async () => {
-    console.log('Executing ${skill.name}...');
-    // Add skill logic here
-  }
-};
-`;
-
-    await fs.writeFile(entrypointPath, entrypointContent);
-
-    // Create README
-    const readme = `# ${skill.name}
-
-${skill.description}
-
-**Version:** ${skill.version}  
-**Author:** ${skill.author}  
-**Repository:** ${skill.repository}
-
-## Permissions
-
-${skill.permissions.map(p => `- ${p}`).join('\n')}
-
-## Dependencies
-
-\`\`\`json
-${JSON.stringify(skill.dependencies, null, 2)}
-\`\`\`
-
-## Installation
-
-This skill was installed via OSM CLI:
-
-\`\`\`bash
-osm i ${skill.name}
-\`\`\`
-
-## Usage
-
-\`\`\`bash
-osm info ${skill.name}
-\`\`\`
-`;
-
-    await fs.writeFile(`${skillPath}/README.md`, readme);
-
-    // Increment download counter
     await incrementDownloads(skillName);
 
     spinner.succeed(chalk.green(`Successfully installed ${skillName} v${skill.version}`));
-    
+
     if (skill.ai_verified) {
       console.log(chalk.green('  ✓ AI-Verified'));
     }
-    
+
     console.log(chalk.gray(`  Installed to: ${skillPath}`));
+    console.log(chalk.gray(`  Source: ${skill.repository}`));
     console.log(chalk.gray(`\n  Run 'osm info ${skillName}' for more details`));
 
   } catch (error) {
     spinner.fail(`Failed to install ${skillName}`);
-    
+
     if (error.response?.status === 404) {
       console.error(chalk.red(`Skill "${skillName}" not found in registry`));
       console.log(chalk.gray(`Run 'osm search ${skillName}' to find similar skills`));

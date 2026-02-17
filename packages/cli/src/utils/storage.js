@@ -1,5 +1,4 @@
 import fs from 'fs-extra';
-import path from 'path';
 import { CONFIG, getSkillPath, getSkillManifestPath } from '../config.js';
 
 export async function ensureOSMDir() {
@@ -14,7 +13,7 @@ export async function isSkillInstalled(skillName) {
 
 export async function getInstalledSkills() {
   await ensureOSMDir();
-  
+
   try {
     const dirs = await fs.readdir(CONFIG.SKILLS_DIR);
     const skills = [];
@@ -28,7 +27,7 @@ export async function getInstalledSkills() {
     }
 
     return skills;
-  } catch (error) {
+  } catch {
     return [];
   }
 }

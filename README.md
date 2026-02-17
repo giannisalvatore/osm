@@ -4,7 +4,7 @@
 
 **Open Skills Manager for AI Agents**
 
-The npm-style package manager for AI agent capabilities. Install, share, and manage skills across Claude, GPT, and any AI agent platform.
+The npm-style package manager for AI agent capabilities. Discover, publish, download, and manage GitHub-hosted skills across Claude, GPT, and any AI agent platform.
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org)
@@ -21,16 +21,16 @@ The npm-style package manager for AI agent capabilities. Install, share, and man
 OSM is the **first universal package manager for AI agent skills**. Think npm, but for AI capabilities.
 
 ```bash
-# Install any skill in seconds
+# Install any skill from the registry in seconds
 osm install gmail-reader
 
-# Your AI agent can now read and analyze Gmail
+# OSM downloads the skill source locally from GitHub for runtime use
 # Skills work across Claude, GPT, Cursor, Windsurf, and any OpenSkills-compatible agent
 ```
 
 **Why OSM?**
 - 📦 **Universal Format**: Compatible with OpenSkills standard (Claude, Cursor, Windsurf)
-- ⚡ **Instant Installation**: npm-style CLI for frictionless skill management
+- ⚡ **Instant Install**: npm-style CLI for frictionless skill activation
 - 🔍 **Discoverable**: Browse and search 100+ community skills
 - 🤖 **AI-Verified**: Trust badges for security-reviewed skills
 - 🔒 **Permission System**: Granular control over what skills can access
@@ -44,21 +44,21 @@ osm install gmail-reader
 <tr>
 <td width="50%">
 
-### For Users
-- 🎯 **One-Command Install** - `osm i <skill>` and you're done
+### For Users & Agents
+- 🎯 **One-Command Install** - `osm i <skill>` downloads the skill locally and registers metadata
 - 🔐 **Transparent Permissions** - See exactly what each skill accesses
 - 📊 **Marketplace UI** - Beautiful web interface to browse skills
-- 🔄 **Version Management** - Update, rollback, remove skills easily
+- 🔄 **Version Management** - Update/remove installed skills easily
 - 🌍 **Works Everywhere** - Compatible with all OpenSkills agents
 
 </td>
 <td width="50%">
 
-### For Developers
-- 📝 **Simple Format** - SKILL.md with YAML frontmatter
-- 🚀 **Auto-Discovery** - Drop in `skills/` folder, done
+### For Skill Creators (Users & Agents)
+- 📝 **Simple Authoring** - Build skills in a GitHub repo with SKILL.md + code
+- 🚀 **Registry-First Publishing** - Publish metadata pointing to your GitHub repository
 - 🎨 **Full Stack** - Backend API + Frontend UI + CLI
-- 💾 **SQLite Storage** - No external dependencies
+- 💾 **SQLite Storage** - Skill metadata and registry links
 - 🔧 **Developer Friendly** - Hot reload, TypeScript-ready
 
 </td>
@@ -67,6 +67,14 @@ osm install gmail-reader
 
 ---
 
+
+## 👥 Who uses OSM
+
+- **Agents as consumers**: use `osm list`, `osm search`, `osm install`, and `osm info` to discover and install skills from the registry.
+- **Users/agents as creators**: create skill repositories on GitHub, maintain `SKILL.md`, and publish metadata (`name`, `description`, `repository`, permissions, dependencies) to OSM.
+- **Local machine responsibility**: OSM stores skill source files + install metadata locally, so agents can execute skills directly after install.
+
+---
 ## 🚀 Quick Start
 
 ### Installation
@@ -97,10 +105,10 @@ npm run dev:frontend
 # List available skills
 osm list
 
-# Install a skill
+# Install a skill from registry metadata + GitHub source
 osm install gmail-reader
 
-# Your AI agent now has new capabilities! 🎉
+# Your AI agent now has new local capabilities, synced from GitHub! 🎉
 ```
 
 ---
@@ -161,8 +169,8 @@ curl http://localhost:3000/skills/search/email
 │                            │                               │
 │                    ┌───────▼────────┐                      │
 │                    │                │                      │
-│                    │  Skills Store  │                      │
-│                    │  (~/.osm/)     │                      │
+│                    │ Local Skills   │                      │
+│                    │ (~/.osm/skills)│                      │
 │                    │                │                      │
 │                    └────────────────┘                      │
 │                                                             │
@@ -177,11 +185,11 @@ curl http://localhost:3000/skills/search/email
 
 ---
 
-## 📦 Skill Format
+## 📦 Skill Authoring Format
 
-OSM uses the **OpenSkills** format - the same standard powering Claude, Cursor, and Windsurf.
+OSM uses the **OpenSkills** format for authoring. Runtime distribution pulls source from linked GitHub repositories into local skill folders.
 
-### Basic Structure
+### GitHub Repository Structure
 
 ```
 my-skill/

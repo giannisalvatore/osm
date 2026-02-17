@@ -1,80 +1,47 @@
 import db, { initDatabase } from './database.js';
-import matter from 'gray-matter';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Initialize database
 initDatabase();
 
-// Read SKILL.md files from skills directory
-const skillsDir = path.join(__dirname, '../../../../skills');
-const skillFolders = fs.readdirSync(skillsDir).filter(name => {
-  const fullPath = path.join(skillsDir, name);
-  return fs.statSync(fullPath).isDirectory();
-});
-
-const demoSkills = [];
-
-for (const folder of skillFolders) {
-  const skillPath = path.join(skillsDir, folder, 'SKILL.md');
-  
-  if (!fs.existsSync(skillPath)) {
-    console.warn(`⚠️  No SKILL.md found in ${folder}`);
-    continue;
-  }
-
-  const fileContent = fs.readFileSync(skillPath, 'utf-8');
-  const { data, content: markdown } = matter(fileContent);
-  
-  // Extract metadata from markdown content
-  const permissionsMatch = markdown.match(/## Permissions Required\n\n([\s\S]*?)(?=\n##|\n---|\z)/i);
-  const permissions = [];
-  if (permissionsMatch) {
-    const permSection = permissionsMatch[1];
-    const permMatches = permSection.matchAll(/`([^`]+)`/g);
-    for (const match of permMatches) {
-      permissions.push(match[1]);
-    }
-  }
-  
-  // Extract dependencies from npm install command
-  const depsMatch = markdown.match(/npm install\s+([^\n]+)/);
-  const dependencies = {};
-  if (depsMatch) {
-    const packages = depsMatch[1].split(/\s+/).filter(p => p && !p.startsWith('-'));
-    packages.forEach(pkg => {
-      const [name, version] = pkg.split('@');
-      if (name && name !== 'npm') {
-        // Remove the ^ prefix if already present in the version
-        const cleanVersion = version && version.startsWith('^') ? version.slice(1) : version;
-        dependencies[name] = cleanVersion ? `^${cleanVersion}` : 'latest';
-      }
-    });
-  }
-  
-  // Determine category from permissions or content
-  let category = 'utility';
-  if (permissions.some(p => p.includes('email') || p.includes('gmail'))) category = 'productivity';
-  if (permissions.some(p => p.includes('finance'))) category = 'finance';
-  if (permissions.some(p => p.includes('feeds') || p.includes('news'))) category = 'news';
-  
-  demoSkills.push({
-    name: data.name || folder,
+// Skills are registry-only references: source files stay on GitHub and are never mirrored locally.
+const demoSkills = [
+  {
+    name: 'gmail-reader',
     version: '1.0.0',
-    description: data.description || 'No description',
+    description: 'Read and analyze Gmail emails with AI-powered filtering and search.',
     author: 'OSMAgent Community',
-    repository: `https://github.com/osmagent/${data.name || folder}`,
+    repository: 'https://github.com/osmagent/gmail-reader',
     ai_verified: 1,
-    permissions: JSON.stringify(permissions),
+    permissions: JSON.stringify(['gmail.read', 'gmail.search', 'gmail.labels']),
     entrypoint: 'index.js',
-    dependencies: JSON.stringify(dependencies),
-    category: category
-  });
-}
+    dependencies: JSON.stringify({ googleapis: '^118.0.0' }),
+    category: 'productivity'
+  },
+  {
+    name: 'budget-analyzer',
+    version: '1.0.0',
+    description: 'Analyze CSV transactions and generate spending insights.',
+    author: 'OSMAgent Community',
+    repository: 'https://github.com/osmagent/budget-analyzer',
+    ai_verified: 1,
+    permissions: JSON.stringify(['finance.read', 'filesystem.read']),
+    entrypoint: 'index.js',
+    dependencies: JSON.stringify({ csv: '^6.3.0', lodash: '^4.17.21' }),
+    category: 'finance'
+  },
+  {
+    name: 'news-digest',
+    version: '1.0.0',
+    description: 'Build a daily digest from trusted RSS and API sources.',
+    author: 'OSMAgent Community',
+    repository: 'https://github.com/osmagent/news-digest',
+    ai_verified: 1,
+    permissions: JSON.stringify(['web.fetch', 'feeds.read']),
+    entrypoint: 'digest.js',
+    dependencies: JSON.stringify({ rss: '^1.2.2', axios: '^1.6.2' }),
+    category: 'news'
+  }
+];
 
 const insertSkill = db.prepare(`
   INSERT OR REPLACE INTO skills 
@@ -90,9 +57,8 @@ const insertMany = db.transaction((skills) => {
 
 insertMany(demoSkills);
 
-console.log(`✓ Seeded ${demoSkills.length} skills from SKILL.md files`);
+console.log(`✓ Seeded ${demoSkills.length} skills from GitHub registry references`);
 demoSkills.forEach(skill => {
   console.log(`  - ${skill.name}: ${skill.description}`);
 });
 console.log('Database ready!');
-

@@ -1,8 +1,13 @@
 import chalk from 'chalk';
 import ora from 'ora';
+import fs from 'fs-extra';
+import { promisify } from 'util';
+import { execFile } from 'child_process';
 import { fetchSkill } from '../utils/api.js';
 import { isSkillInstalled, loadSkillManifest, saveSkillManifest } from '../utils/storage.js';
 import { getSkillPath } from '../config.js';
+
+const execFileAsync = promisify(execFile);
 
 export async function updateCommand(skillName) {
   if (!skillName) {
@@ -14,30 +19,25 @@ export async function updateCommand(skillName) {
   const spinner = ora(`Checking for updates to ${skillName}...`).start();
 
   try {
-    // Check if skill is installed
     if (!await isSkillInstalled(skillName)) {
       spinner.fail(`${skillName} is not installed`);
       console.log(chalk.gray(`Use 'osm i ${skillName}' to install it`));
       return;
     }
 
-    // Load current manifest
     const currentManifest = await loadSkillManifest(skillName);
     const currentVersion = currentManifest.version;
 
-    // Fetch latest version from registry
     const data = await fetchSkill(skillName);
     const latestSkill = data.skill;
     const latestVersion = latestSkill.version;
+    const skillPath = getSkillPath(skillName);
 
-    if (currentVersion === latestVersion) {
-      spinner.succeed(`${skillName} is already up to date (v${currentVersion})`);
-      return;
-    }
+    spinner.text = `Syncing source from ${latestSkill.repository}...`;
 
-    spinner.text = `Updating ${skillName} from v${currentVersion} to v${latestVersion}...`;
+    await fs.remove(skillPath);
+    await execFileAsync('git', ['clone', '--depth', '1', latestSkill.repository, skillPath]);
 
-    // Update manifest
     const updatedManifest = {
       name: latestSkill.name,
       version: latestSkill.version,
@@ -52,8 +52,13 @@ export async function updateCommand(skillName) {
 
     await saveSkillManifest(skillName, updatedManifest);
 
-    spinner.succeed(chalk.green(`Successfully updated ${skillName} from v${currentVersion} to v${latestVersion}`));
-    console.log(chalk.gray(`  Location: ${getSkillPath(skillName)}`));
+    if (currentVersion === latestVersion) {
+      spinner.succeed(`${skillName} source refreshed (version still v${currentVersion})`);
+    } else {
+      spinner.succeed(chalk.green(`Successfully updated ${skillName} from v${currentVersion} to v${latestVersion}`));
+    }
+
+    console.log(chalk.gray(`  Location: ${skillPath}`));
 
   } catch (error) {
     spinner.fail(`Failed to update ${skillName}`);
