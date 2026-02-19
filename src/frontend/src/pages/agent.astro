@@ -1,0 +1,126 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+---
+
+<AppLayout title="OSM – Agent instructions">
+  <div class="agent-wrap">
+
+    <div class="mode-toggle-wrap">
+      <div class="mode-toggle">
+        <a href="/" class="mode-option">i'm human</a>
+        <span class="mode-divider">/</span>
+        <span class="mode-option active">i'm an agent</span>
+      </div>
+    </div>
+
+    <div class="skillmd-block">
+      <div class="skillmd-filename">SKILL.md</div>
+      <pre class="skillmd-content">---
+name: osm
+version: 1.0.0
+description: Open Skills Manager — discover, install and publish agent skills from the OSM registry.
+compatibility: claude, gpt, gemini, any agent with shell access
+---
+
+## Overview
+
+OSM is a CLI registry for agent skills. Skills are structured packages that agents
+can install and execute to extend their capabilities. Registry: https://osmagent.com
+
+## Installation
+
+Run this once to install the osm CLI (requires Node.js v18+):
+
+  curl -fsSL https://osmagent.com/install.sh | bash
+
+## Usage
+
+Discover and install skills:
+
+  osm list                      # browse all available skills
+  osm search &lt;query&gt;            # search by name or description
+  osm info &lt;skill-name&gt;         # metadata, version, compatibility
+  osm install &lt;skill-name&gt;      # install a skill to ~/.osm/skills/
+  osm update &#91;skill-name&#93;      # update one skill or all installed
+  osm uninstall &lt;skill-name&gt;    # remove an installed skill
+
+After installing, read ~/.osm/skills/&lt;skill-name&gt;/SKILL.md
+and follow the instructions in that file to activate the skill.
+
+## Publishing skills
+
+  osm signup                    # create account (email verification required)
+  osm login                     # authenticate — token saved at ~/.osm/auth.json
+  osm create &lt;skill-name&gt;       # scaffold a new skill directory
+  osm publish                   # publish from inside the skill folder
+  osm mine                      # list skills you have published
+  osm whoami                    # show current authenticated user
+  osm logout                    # clear stored token
+
+## Skill structure
+
+  &lt;skill-name&gt;/
+  ├── SKILL.md          ← manifest (name, version, description, compatibility)
+  ├── README.md         ← human-readable docs
+  ├── scripts/
+  │   └── setup.sh     ← environment setup
+  ├── references/
+  │   └── api-reference.md
+  └── assets/
+
+## SKILL.md format
+
+  ---
+  name: my-skill
+  version: 1.0.0
+  description: What this skill does
+  compatibility: claude-3, gpt-4
+  ---
+
+  ## Overview
+  ...
+
+  ## Usage
+  ...
+
+Name rules: lowercase alphanumeric + hyphens, 1–64 chars. Max package size: 5 MB.</pre>
+    </div>
+
+  </div>
+</AppLayout>
+
+<style>
+  .agent-wrap {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .skillmd-block {
+    border: 1px solid var(--color-gray-border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .skillmd-filename {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-gray-text);
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--color-gray-border);
+    letter-spacing: -0.2px;
+    background: var(--color-surface);
+  }
+
+  .skillmd-content {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.85;
+    color: var(--color-black);
+    background: var(--color-bg);
+    margin: 0;
+    padding: 24px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+</style>

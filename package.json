@@ -1,0 +1,26 @@
+{
+  "name": "osm-monorepo",
+  "version": "1.0.0",
+  "description": "OSMAgent - Open Skills Manager",
+  "private": true,
+  "workspaces": [
+    "src/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=@osm/backend",
+    "dev:frontend": "npm run dev --workspace=@osm/frontend",
+    "dev:cli": "npm run dev --workspace=osm-cli",
+    "build:all": "npm run build --workspaces",
+    "install:cli": "npm install -g ./src/cli",
+    "sync:install": "cp src/installer/install.sh src/frontend/public/install.sh",
+    "release:cli": "npm run pack:dist --workspace=osm-cli && cp src/frontend/public/osm-cli-$(node -e \"process.stdout.write(require('./src/cli/package.json').version)\").tgz src/frontend/public/osm-cli.tgz && cp src/installer/install.sh src/frontend/public/install.sh && echo 'CLI packaged and install.sh synced'"
+  },
+  "keywords": [
+    "osm",
+    "skills",
+    "marketplace",
+    "ai"
+  ],
+  "author": "Gianni Salvatore",
+  "license": "MIT"
+}

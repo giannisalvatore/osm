@@ -1,0 +1,500 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'https://api.osmagent.com';
+---
+
+<AppLayout title="OSM">
+  <div class="detail-content">
+
+    <a href="/" class="back-link">← Back</a>
+
+    <div id="skill-loading">
+      <div class="skeleton-title"></div>
+      <div class="skeleton-desc"></div>
+    </div>
+
+    <div id="skill-error" style="display:none">
+      <p class="error-title">Error</p>
+      <p class="detail-description" id="error-msg"></p>
+    </div>
+
+    <div id="skill-body" style="display:none">
+
+      <div class="detail-hero">
+        <div id="skill-author-hero" style="display:none" class="author-hero">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span id="skill-author-hero-name"></span>
+        </div>
+        <h1 class="detail-name" id="skill-name"></h1>
+        <p class="detail-description" id="skill-description"></p>
+        <div class="detail-meta">
+          <span class="meta-label">Version</span>
+          <span class="meta-value" id="skill-version"></span>
+          <span class="meta-sep">·</span>
+          <span class="meta-label">Downloads</span>
+          <span class="meta-value" id="skill-downloads"></span>
+            <span id="skill-license-block" style="display:none">
+              <span class="meta-sep">·</span>
+              <span class="meta-label">License</span>
+              <span class="meta-value" id="skill-license"></span>
+            </span>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="install-row">
+          <code class="install-code" id="install-cmd"></code>
+          <button class="copy-btn" id="copy-btn">Copy</button>
+        </div>
+      </div>
+
+      <div class="detail-section tabs-section" id="tabs-section" style="display:none">
+        <div class="tabs-bar">
+          <button class="tab-btn active" data-tab="skill">SKILL.md</button>
+          <button class="tab-btn " data-tab="readme">Readme</button>
+          <button class="tab-btn" data-tab="files">Files</button>
+        </div>
+        <div class="tab-panel " id="tab-skill">
+          <div class="readme-content" id="skill-md-content"></div>
+        </div>
+        <div class="tab-panel hidden" id="tab-readme">
+          <div class="readme-content" id="readme-content"></div>
+        </div>
+        <div class="tab-panel hidden" id="tab-files">
+          <ul class="file-tree" id="file-tree"></ul>
+        </div>
+      </div>
+
+      <div class="detail-section" id="deps-section" style="display:none">
+        <h2 class="section-label">Dependencies</h2>
+        <div class="skills-list" id="deps-list"></div>
+      </div>
+
+      <div class="detail-section" id="repo-section" style="display:none">
+        <a href="#" target="_blank" class="github-link" id="repo-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+          </svg>
+          View on GitHub →
+        </a>
+      </div>
+
+    </div>
+
+  </div>
+</AppLayout>
+
+<style is:global>
+  .detail-content {
+    max-width: 700px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* ── Detail hero ── */
+
+  .author-hero {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--color-gray-text);
+    font-family: var(--font-mono);
+    letter-spacing: -0.2px;
+    margin-bottom: 8px;
+  }
+  .author-hero svg { flex-shrink: 0; }
+
+  .detail-name {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin: 0 0 12px 0;
+    color: var(--color-black);
+  }
+
+  .detail-description {
+    font-size: 14px;
+    color: var(--color-gray-text);
+    margin: 0 0 20px 0;
+    line-height: 1.6;
+    letter-spacing: -0.3px;
+  }
+
+  .detail-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+  }
+
+  .meta-label { color: var(--color-gray-text); }
+  .meta-value {
+    color: var(--color-black);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .meta-sep { color: var(--color-gray-border); }
+
+  /* ── Detail section ── */
+  .detail-section {
+    padding-top: 32px;
+    margin-bottom: 32px;
+  }
+
+  /* ── Install row (skill detail) ── */
+  .install-row {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid #111;
+    height: 56px;
+  }
+
+  .install-code {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    letter-spacing: -0.5px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: var(--color-black);
+    font-weight: 500;
+  }
+
+  .copy-btn {
+    background: var(--color-black);
+    color: var(--color-white);
+    border: none;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0 24px;
+    cursor: pointer;
+    letter-spacing: -0.3px;
+  }
+
+  .copy-btn:hover { background: var(--color-black); }
+
+  /* ── GitHub link ── */
+  .github-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--color-gray-text);
+    text-decoration: none;
+    letter-spacing: -0.3px;
+  }
+
+  .github-link:hover { color: var(--color-black); }
+
+  /* Skeletons */
+  .skeleton-title {
+    height: 28px;
+    width: 220px;
+    background: var(--color-surface);
+    border-radius: 4px;
+    margin: 0 0 14px;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  .skeleton-desc {
+    height: 16px;
+    width: 380px;
+    max-width: 100%;
+    background: var(--color-surface);
+    border-radius: 4px;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
+  /* Error */
+  .error-state { padding: 40px 0; }
+
+  .error-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 12px 0;
+  }
+  
+  #skill-license-block{
+    display: flex;
+    gap: 10px;
+  }
+
+  /* Tabs */
+  .tabs-section { padding-top: 0; }
+  .tabs-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--color-gray-border);
+    margin-bottom: 20px;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--color-gray-text);
+    margin-bottom: -1px;
+    letter-spacing: -0.3px;
+    transition: color 0.15s, border-color 0.15s;
+
+  }
+  .tab-btn.active {
+    color: var(--color-black);
+    border-bottom-color: var(--color-black);
+  }
+  .tab-panel.hidden { display: none; }
+
+  /* Markdown readme */
+  .readme-content {
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--color-black);
+    overflow-x: auto;
+  }
+  .readme-content h1, .readme-content h2, .readme-content h3,
+  .readme-content h4, .readme-content h5, .readme-content h6 {
+    font-weight: 700;
+    margin: 2em 0 0.4em;
+    line-height: 1.3;
+    color: var(--color-black);
+  }
+  .readme-content h1 { font-size: 1.35em; margin-top: 0;}
+  .readme-content h2 { font-size: 1.15em; }
+  .readme-content h3 { font-size: 1em; }
+  .readme-content p  { margin: 0.75em 0; }
+  .readme-content ul, .readme-content ol {
+    padding-left: 1.4em;
+    margin: 0.6em 0;
+  }
+  .readme-content li { margin: 0.75em 0; }
+  .readme-content code {
+    background: var(--color-surface);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.9em;
+  }
+  .readme-content pre {
+    background: var(--color-surface);
+    color: var(--color-black);
+    padding: 14px 18px;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin: 0.8em 0;
+  }
+  .readme-content pre code {
+    background: none;
+    padding: 0;
+    font-size: 0.85em;
+  }
+  .readme-content a { color: #6d28d9; text-decoration: underline; }
+  .readme-content hr {
+    border: none;
+    border-top: 1px solid var(--color-gray-border);
+    margin: 1.2em 0;
+  }
+  .readme-content blockquote {
+    border-left: 3px solid var(--color-gray-border);
+    margin: 0.8em 0;
+    padding: 4px 16px;
+    color: var(--color-gray-text);
+  }
+  .tab-empty {
+    color: var(--color-gray-text);
+    font-size: 13px;
+    margin: 0;
+  }
+
+  .file-tree {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .file-entry {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-black);
+  }
+  .file-entry svg {
+    flex-shrink: 0;
+    color: var(--color-gray-text);
+  }
+</style>
+
+<script define:vars={{ API_URL }}>
+  window.__OSM_API_URL__ = API_URL;
+</script>
+
+<script>
+  import { marked } from 'marked';
+
+  const API_URL   = window.__OSM_API_URL__ || 'http://localhost:3000';
+  const skillName = decodeURIComponent(window.location.pathname.split('/skill/')[1] || '');
+
+  const elLoading  = document.getElementById('skill-loading');
+  const elError    = document.getElementById('skill-error');
+  const elBody     = document.getElementById('skill-body');
+  const elErrorMsg = document.getElementById('error-msg');
+
+  function show(el) { el.style.display = ''; }
+  function hide(el) { el.style.display = 'none'; }
+
+  function fmtDownloads(n) {
+    const SVG = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px;margin-right:2px"><path d="M12 5v14M19 12l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    return SVG + (n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n || 0));
+  }
+
+  async function load() {
+    try {
+      const [metaRes, filesRes] = await Promise.all([
+        fetch(`${API_URL}/registry/${encodeURIComponent(skillName)}`),
+        fetch(`${API_URL}/registry/${encodeURIComponent(skillName)}/files`),
+      ]);
+
+      const data = await metaRes.json();
+      if (!metaRes.ok || data.error) throw new Error(data.error || 'Skill not found');
+
+      const latestVersion = data['dist-tags']?.latest || Object.keys(data.versions || {})[0];
+      const versionData   = data.versions?.[latestVersion] || {};
+      const skill = {
+        name:         data.name,
+        description:  data.description || versionData.description || '',
+        version:      latestVersion,
+        downloads:    data.downloads || 0,
+        author:       data.author || null,
+        repository:   versionData.repository || null,
+        dependencies: versionData.dependencies || null,
+      };
+
+      document.title = `${skill.name} - OSM`;
+      document.getElementById('skill-name').textContent        = skill.name;
+      document.getElementById('skill-description').textContent = skill.description;
+      document.getElementById('skill-version').textContent     = skill.version;
+      document.getElementById('skill-downloads').innerHTML     = fmtDownloads(skill.downloads);
+      document.getElementById('install-cmd').textContent       = `osm install ${skill.name}`;
+
+      if (skill.author) {
+        document.getElementById('skill-author-hero-name').textContent = skill.author;
+        show(document.getElementById('skill-author-hero'));
+      }
+
+      if (skill.repository) {
+        document.getElementById('repo-link').href = skill.repository;
+        show(document.getElementById('repo-section'));
+      }
+
+      if (skill.dependencies && Object.keys(skill.dependencies).length > 0) {
+        const list = document.getElementById('deps-list');
+        for (const [dep, ver] of Object.entries(skill.dependencies)) {
+          list.innerHTML += `<div class="skill-item"><span class="skill-name">${dep}</span><span class="skill-spacer"></span><span class="skill-downloads">${ver}</span></div>`;
+        }
+        show(document.getElementById('deps-section'));
+      }
+
+      document.getElementById('copy-btn').addEventListener('click', () => {
+        navigator.clipboard.writeText(`osm install ${skill.name}`).then(() => {
+          const btn = document.getElementById('copy-btn');
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 2000);
+        });
+      });
+
+      if (filesRes.ok) {
+        const filesData = await filesRes.json();
+        const fileList  = filesData.files || [];
+        const contents  = filesData.contents || {};
+        const readmeKey  = Object.keys(contents).find(k => /readme/i.test(k));
+        const skillMdKey = Object.keys(contents).find(k => /skill\.md$/i.test(k));
+
+        if (fileList.length > 0 || readmeKey || skillMdKey) {
+          show(document.getElementById('tabs-section'));
+
+          const readmeEl = document.getElementById('readme-content');
+          if (readmeKey) {
+            readmeEl.innerHTML = marked.parse(contents[readmeKey]);
+          } else {
+            readmeEl.outerHTML = '<p class="tab-empty">No README found.</p>';
+          }
+
+          const skillMdEl = document.getElementById('skill-md-content');
+          if (skillMdKey) {
+            const raw = contents[skillMdKey];
+            const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+            let bodyMd = raw;
+            if (fmMatch) {
+              // Extract license for the meta bar only
+              const fmLines = fmMatch[1].split('\n').filter(l => l.trim());
+              const licenseLine = fmLines.find(l => /^license\s*:/i.test(l));
+              if (licenseLine) {
+                const licVal = licenseLine.slice(licenseLine.indexOf(':') + 1).trim();
+                document.getElementById('skill-license').textContent = licVal;
+                show(document.getElementById('skill-license-block'));
+              }
+              bodyMd = fmMatch[2];
+            }
+            skillMdEl.innerHTML = bodyMd.trim() ? marked.parse(bodyMd) : '<p class="tab-empty">No content.</p>';
+          } else {
+            skillMdEl.outerHTML = '<p class="tab-empty">No SKILL.md found.</p>';
+          }
+
+          const fileTree = document.getElementById('file-tree');
+          if (fileList.length > 0) {
+            fileList.forEach(f => {
+              fileTree.innerHTML += `<li class="file-entry"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>${f}</li>`;
+            });
+          } else {
+            fileTree.outerHTML = '<p class="tab-empty">No files available.</p>';
+          }
+        }
+      }
+
+      hide(elLoading);
+      show(elBody);
+
+    } catch (err) {
+      hide(elLoading);
+      elErrorMsg.textContent = err.message || 'Unable to load skill';
+      show(elError);
+    }
+  }
+
+  if (skillName) {
+    load();
+  } else {
+    hide(elLoading);
+    elErrorMsg.textContent = 'Invalid skill URL';
+    show(elError);
+  }
+
+  // Tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
+    });
+  });
+</script>

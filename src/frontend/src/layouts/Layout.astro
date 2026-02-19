@@ -1,0 +1,47 @@
+---
+interface Props {
+  title?: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content="OSMAgent - Open Skills Marketplace" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title || 'OSM'}</title>
+    <script is:inline>
+      (function() {
+        try {
+          var saved = localStorage.getItem('osm-theme');
+          if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+          }
+        } catch(e) {}
+      })();
+    </script>
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="1bd8e400-87a3-4e8f-ba1f-754d03181247"></script>
+    <style is:global>
+      @font-face { font-family: 'JetBrains Mono'; font-weight: 100; font-style: normal; font-display: swap; src: url('/fonts/JetBrainsMono-Thin.woff2') format('woff2'); }
+      @font-face { font-family: 'JetBrains Mono'; font-weight: 200; font-style: normal; font-display: swap; src: url('/fonts/JetBrainsMono-ExtraLight.woff2') format('woff2'); }
+      @font-face { font-family: 'JetBrains Mono'; font-weight: 300; font-style: normal; font-display: swap; src: url('/fonts/JetBrainsMono-Light.woff2') format('woff2'); }
+      @font-face { font-family: 'JetBrains Mono'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2'); }
+      @font-face { font-family: 'JetBrains Mono'; font-weight: 400; font-style: italic; font-display: swap; src: url('/fonts/JetBrainsMono-Italic.woff2') format('woff2'); }
+      @font-face { font-family: 'JetBrains Mono'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/JetBrainsMono-Medium.woff2') format('woff2'); }
+      @font-face { font-family: 'JetBrains Mono'; font-weight: 600; font-style: normal; font-display: swap; src: url('/fonts/JetBrainsMono-SemiBold.woff2') format('woff2'); }
+      @font-face { font-family: 'JetBrains Mono'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/JetBrainsMono-Bold.woff2') format('woff2'); }
+      @font-face { font-family: 'JetBrains Mono'; font-weight: 700; font-style: italic; font-display: swap; src: url('/fonts/JetBrainsMono-BoldItalic.woff2') format('woff2'); }
+      @font-face { font-family: 'JetBrains Mono'; font-weight: 800; font-style: normal; font-display: swap; src: url('/fonts/JetBrainsMono-ExtraBold.woff2') format('woff2'); }
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body { font-family: 'JetBrains Mono', monospace !important; }
+    </style>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "name": "@osm/backend",
+  "version": "1.0.0",
+  "description": "OSMAgent Backend API",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/index.js",
+    "start": "node src/index.js",
+    "init-db": "node src/db/init.js",
+    "test": "node --test src/**/*.test.js"
+  },
+  "dependencies": {
+    "@koa/cors": "^5.0.0",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.3.1",
+    "gray-matter": "^4.0.3",
+    "koa": "^2.14.2",
+    "koa-bodyparser": "^4.4.1",
+    "koa-router": "^12.0.1",
+    "mysql2": "^3.17.2",
+    "resend": "^6.9.2",
+    "sequelize": "^6.37.7",
+    "tar-stream": "^3.1.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

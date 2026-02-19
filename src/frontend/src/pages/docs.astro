@@ -1,0 +1,275 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+---
+
+<AppLayout title="Docs - OSM">
+
+  <div class="docs-hero">
+    <h1 class="docs-title">Documentation for agents and users</h1>
+    <p class="docs-subtitle">Everything you need to use and publish skills.</p>
+  </div>
+
+  <div class="docs-body">
+
+    <section class="docs-section">
+      <h2 class="section-label">Installation</h2>
+      <div class="install-row">
+        <code class="install-code">curl -fsSL https://www.osmagent.com/install.sh | bash</code>
+        <button class="copy-btn" onclick="navigator.clipboard.writeText('curl -fsSL https://osmagent.com/install.sh | bash')">Copy</button>
+      </div>
+      <p class="docs-text">Requires Node.js v18+.</p>
+    </section>
+
+    <section class="docs-section">
+      <h2 class="section-label">Using skills</h2>
+      <div class="cmd-table">
+        <div class="cmd-row"><code>osm list [page] [limit]</code><span>List skills in the registry, paginated (default: page 1, 20 per page, max 100)</span></div>
+        <div class="cmd-row"><code>osm search &lt;query&gt;</code><span>Search skills by name or description</span></div>
+        <div class="cmd-row"><code>osm info &lt;skill&gt;</code><span>Show details, version and compatibility of a skill</span></div>
+        <div class="cmd-row"><code>osm install &lt;skill&gt;</code><span>Install a skill&nbsp;&nbsp;<em>alias: i</em></span></div>
+        <div class="cmd-row"><code>osm update [skill]</code><span>Update a skill or all skills&nbsp;&nbsp;<em>alias: u</em></span></div>
+        <div class="cmd-row"><code>osm uninstall &lt;skill&gt;</code><span>Remove a skill&nbsp;&nbsp;<em>alias: remove, rm</em></span></div>
+        <div class="cmd-row"><code>osm whoami</code><span>Show current authenticated user</span></div>
+        <div class="cmd-row"><code>osm mine</code><span>List all skills published by you</span></div>
+      </div>
+    </section>
+
+    <section class="docs-section">
+      <h2 class="section-label">Publishing skills</h2>
+      <div class="cmd-table">
+        <div class="cmd-row"><code>osm create &lt;skill-name&gt;</code><span>Scaffold a new skill in the current directory</span></div>
+        <div class="cmd-row"><code>osm signup</code><span>Create a new account</span></div>
+        <div class="cmd-row"><code>osm login</code><span>Authenticate and store local token</span></div>
+        <div class="cmd-row"><code>osm logout</code><span>Clear stored authentication token</span></div>
+        <div class="cmd-row"><code>osm publish</code><span>Publish skill from current directory</span></div>
+      </div>
+    </section>
+
+    <section class="docs-section">
+      <h2 class="section-label">Publishing a skill</h2>
+      <div class="steps">
+        <div class="step">
+          <span class="step-num">01</span>
+          <div class="step-body">
+            <p class="step-title">Scaffold the skill</p>
+            <p class="step-desc">Run <code>osm create &lt;skill-name&gt;</code> in your working directory. This generates the folder structure and a <code>SKILL.md</code> template.</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-num">02</span>
+          <div class="step-body">
+            <p class="step-title">Edit the skill</p>
+            <p class="step-desc">The scaffold generates this structure:</p>
+            <pre class="code-block"><skill-name>/
+├── SKILL.md          ← manifest (name, version, description, compatibility)
+├── README.md         ← human-readable description
+├── scripts/
+│   └── setup.sh      ← environment setup (install deps, auth, etc.)
+├── references/
+│   └── api-reference.md  ← APIs / services the skill relies on
+└── assets/           ← optional static files</pre>
+            <p class="step-desc" style="margin-top:12px">Edit <code>SKILL.md</code> filling in the front-matter and describing the skill in the body following the <a href="https://agentskills.io" target="_blank">agentskills.io</a> spec. Everything in the folder will be packaged and published.</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-num">03</span>
+          <div class="step-body">
+            <p class="step-title">Create an account or log in</p>
+            <p class="step-desc">First time: <code>osm signup</code>. Already have an account: <code>osm login</code>. You will be prompted for your credentials. Your token is stored locally in <code>~/.osm/auth.json</code>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-num">04</span>
+          <div class="step-body">
+            <p class="step-title">Publish</p>
+            <p class="step-desc">From inside your skill directory run <code>osm publish</code>. The version is read from <code>SKILL.md</code>. Max package size is 1 MB.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="docs-section">
+      <h2 class="section-label">SKILL.md format</h2>
+      <p class="docs-text">The manifest is a Markdown file with YAML front-matter:</p>
+      <pre class="code-block">---
+name: my-skill
+version: 1.0.0
+description: What this skill does
+compatibility: claude-3, gpt-4
+---
+
+## Overview
+Describe your skill here.</pre>
+    </section>
+
+  </div>
+
+</AppLayout>
+
+<style>
+  .docs-hero { margin-bottom: 48px;  }
+  .docs-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin: 0 0 10px;
+    max-width: 680px; margin: 0 auto;
+  }
+  .docs-subtitle {
+    font-size: 14px;
+    color: var(--color-gray-text);
+    margin: 0;
+    letter-spacing: -0.3px;
+    max-width: 680px; margin: 0 auto;
+  }
+
+  .docs-body { max-width: 680px; margin: 0 auto; }
+
+  .install-row {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid #111;
+    height: 56px;
+    margin-bottom: 12px;
+  }
+  .install-code {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    letter-spacing: -0.5px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: var(--color-black);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .copy-btn {
+    background: var(--color-black);
+    color: var(--color-white);
+    border: none;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0 24px;
+    cursor: pointer;
+    letter-spacing: -0.3px;
+    flex-shrink: 0;
+  }
+  .copy-btn:hover { background: var(--color-black); }
+
+  .docs-section {
+    padding-top: 32px;
+    margin-bottom: 32px;
+  }
+
+  .docs-text {
+    font-size: 14px;
+    color: var(--color-gray-text);
+    margin: 0 0 16px;
+    line-height: 1.7;
+    letter-spacing: -0.3px;
+  }
+
+  .cmd-table { display: flex; flex-direction: column; }
+  .cmd-row {
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--color-gray-border);
+    font-size: 13px;
+  }
+  .cmd-row code {
+    flex-shrink: 0;
+    width: 240px;
+    font-family: var(--font-mono);
+    color: var(--color-black);
+    font-weight: 500;
+  }
+  .cmd-row span {
+    color: var(--color-gray-text);
+    letter-spacing: -0.3px;
+  }
+  .cmd-row em { opacity: 0.6; font-style: normal; }
+
+  .docs-list {
+    font-size: 14px;
+    color: var(--color-gray-text);
+    line-height: 1.9;
+    padding-left: 20px;
+    margin: 0;
+    letter-spacing: -0.3px;
+  }
+  .docs-list a { color: var(--color-black); }
+  .docs-list code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+
+  .steps { display: flex; flex-direction: column; }
+  .step {
+    display: flex;
+    gap: 24px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--color-gray-border);
+  }
+  .step-num {
+    font-size: 13px;
+    color: var(--color-gray-text);
+    width: 24px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .step-body { flex: 1; min-width: 0; }
+  .step-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-black);
+    margin: 0 0 6px;
+    letter-spacing: -0.3px;
+  }
+  .step-desc {
+    font-size: 13px;
+    color: var(--color-gray-text);
+    margin: 0;
+    line-height: 1.7;
+    letter-spacing: -0.3px;
+  }
+  .step-desc code {
+    font-family: var(--font-mono);
+    color: var(--color-black);
+    font-size: 12px;
+  }
+  .step-desc a { color: var(--color-black); }
+
+  .code-block {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-gray-border);
+    padding: 20px;
+    margin: 0;
+    line-height: 1.7;
+    letter-spacing: -0.3px;
+    overflow-x: auto;
+    white-space: pre;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  @media (max-width: 600px) {
+    .cmd-row {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .cmd-row code {
+      width: auto;
+    }
+  }
+</style>
+</Layout>

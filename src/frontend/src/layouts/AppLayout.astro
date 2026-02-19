@@ -1,0 +1,388 @@
+---
+import Code from '@lucide/astro/icons/code';
+import Box from '@lucide/astro/icons/box';
+import Sun from '@lucide/astro/icons/sun';
+import Moon from '@lucide/astro/icons/moon';
+import Layout from './Layout.astro';
+
+interface Props {
+  title?: string;
+}
+
+const { title } = Astro.props;
+const currentPath = Astro.url.pathname;
+---
+
+<Layout title={title}>
+  <div class="app-shell">
+
+    <header class="app-header">
+      <a href="/" class="logo">OSM</a>
+      <div class="tagline">osm is an agent skills registry · specs:agentskills.io</div>
+      <div class="auth-buttons">
+        <a href="/" class={`text ${currentPath === '/' ? 'active' : ''}`}>
+          <Box class="w-3.5 h-3.5" /> 
+          <span>Skills</span>
+        </a>
+        <span class="divider">·</span>        
+        <a href="/docs" class={`text ${currentPath === '/docs' ? 'active' : ''}`}>
+          <Code class="w-3.5 h-3.5" />
+          <span>Docs</span>
+        </a>
+        <span class="divider">·</span>
+        <a href="https://github.com/giannisalvatore/osm" target="_blank" class="text github-stars-link">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          <span id="gh-stars">★</span>
+        </a>
+        <span class="divider">·</span>
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+          <Sun class="w-3.5 h-3.5 icon-sun" />
+          <Moon class="w-3.5 h-3.5 icon-moon" />
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <slot />
+    </main>
+
+    <footer class="app-footer">
+      <div>
+        <a href="/discovery" class="discovery-link">
+          <span class="discovery-dot" aria-hidden="true"></span>
+          OSM Discovery
+        </a>
+      </div>
+      <div>
+        <span>OSM (Open Skills Manager) ·&nbsp;</span>
+        <a href="https://github.com/giannisalvatore/osm" target="_blank">100% Open source</a>
+      </div>
+      
+    </footer>
+
+  </div>
+</Layout>
+
+<style is:global>
+  :root {
+    --font-mono: 'JetBrains Mono', monospace;
+    --color-bg: #ffffff;
+    --color-surface: #f9fafb;
+    --color-black: #0a0a0a;
+    --color-white: #fff;
+    --color-gray-border: #e5e7eb;
+    --color-gray-text: #6b7280;
+  }
+
+  [data-theme="dark"] {
+    --color-bg: #0a0a0a;
+    --color-surface: #141414;
+    --color-black: #e8e8e8;
+    --color-white: #0a0a0a;
+    --color-gray-border: #2a2a2a;
+    --color-gray-text: #888888;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-mono);
+    -webkit-font-smoothing: antialiased;
+    background-color: var(--color-bg);
+    color: var(--color-black);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 20px 25px;
+    width: 100%;
+    font-family: var(--font-mono);
+  }
+
+  /* ── Header ── */
+  .app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    margin-bottom: 56px;
+  }
+
+  .logo {
+    font-size: 26px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: -1.5px;
+    text-decoration: none;
+    color: var(--color-black);
+  }
+
+  .tagline {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 14px;
+    color: var(--color-gray-text);
+    white-space: nowrap;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+  }
+
+  @media (max-width: 1024px) { .tagline { display: none; } }
+  
+  .auth-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .auth-buttons a {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .text{
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.3px;
+    text-decoration: none;
+    color: var(--color-gray-text);
+  }
+  .text.active {
+    color: var(--color-black);
+    font-weight: 700;
+  }
+  .divider{
+    opacity: 0.2;
+  }
+
+  .btn-primary:hover { background: #333; }
+
+  /* ── Main area ── */
+  .app-main {
+    flex: 1;
+    width: 100%;
+  }
+
+  /* ── Footer ── */
+  .app-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--color-gray-text);
+    margin-top: auto;
+    padding-top: 40px;
+  }
+
+  .discovery-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-gray-text);
+    text-decoration: none;
+  }
+  .discovery-link:hover { color: var(--color-black); }
+
+  .discovery-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .discovery-dot::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    background: #22c55e;
+    opacity: 0.5;
+    animation: dot-pulse 1.8s ease-out infinite;
+  }
+  @keyframes dot-pulse {
+    0%   { transform: scale(1);   opacity: 0.5; }
+    70%  { transform: scale(1.6); opacity: 0; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+
+  /* ── Shared skill-list styles (homepage + detail deps) ── */
+  h2 {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--color-gray-text);
+    margin-bottom: 30px;
+    margin-top: 0;
+  }
+
+  .skills-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .skill-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--color-gray-border);
+    text-decoration: none;
+    color: inherit;
+    transition: background-color 0.1s;
+    font-size: 14px;
+  }
+
+  .skill-item:hover { background-color: var(--color-surface); }
+
+  .skill-number {
+    color: var(--color-gray-text);
+    width: 40px;
+    flex-shrink: 0;
+  }
+
+  .skill-name {
+    color: var(--color-gray-text);
+    letter-spacing: -0.3px;
+  }
+
+  .skill-item:hover .skill-name { color: var(--color-black); }
+
+  .skill-spacer { flex: 1; }
+
+  .skill-downloads {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-gray-text);
+    font-size: 13px;
+  }
+
+  .empty-state {
+    padding: 20px 0;
+    color: var(--color-gray-text);
+    font-size: 14px;
+  }
+
+  /* ── Shared back link ── */
+  .back-link {
+    display: inline-block;
+    font-size: 14px;
+    color: var(--color-gray-text);
+    text-decoration: none;
+    margin-bottom: 48px;
+    letter-spacing: -0.3px;
+  }
+
+  .back-link:hover { color: var(--color-black); }
+
+  /* ── Shared section label ── */
+  .section-label {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--color-gray-text);
+    margin: 0 0 20px 0;
+    letter-spacing: -0.3px;
+  }
+
+  .github-stars-link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* ── Mode toggle (human / agent) ── */
+  .mode-toggle-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 40px;
+  }
+  .mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-family: var(--font-mono);
+    letter-spacing: -0.3px;
+  }
+  .mode-option {
+    color: var(--color-gray-text);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.15s;
+    font-weight: 500;
+  }
+  .mode-option.active {
+    color: var(--color-black);
+    font-weight: 700;
+  }
+  .mode-option:not(.active):hover { color: var(--color-black); }
+  .mode-divider { color: var(--color-gray-text); opacity: 0.4; }
+
+  /* ── Theme toggle ── */
+  .theme-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    color: var(--color-gray-text);
+    transition: color 0.2s ease;
+  }
+  .theme-toggle:hover { color: var(--color-black); }
+
+  :root .icon-moon { display: none; }
+  :root .icon-sun  { display: block; }
+  [data-theme="dark"] .icon-moon { display: block; }
+  [data-theme="dark"] .icon-sun  { display: none; }
+
+  @media screen and (max-width: 600px) {
+    .app-footer{
+      display: block;
+      text-align: center;
+    }
+    .app-footer div:first-child{
+      margin-bottom: 10px;
+    }
+  }
+
+</style>
+
+<script>
+  function setStars(n) {
+    const el = document.getElementById('gh-stars');
+    if (el && typeof n === 'number') {
+      el.textContent = n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n);
+    }
+  }
+
+  // Theme toggle
+  const btn = document.getElementById('theme-toggle');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const next = isDark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('osm-theme', next); } catch(e) {}
+    });
+  }
+
+  const cached = sessionStorage.getItem('gh-stars');
+  if (cached !== null) {
+    setStars(Number(cached));
+  } else {
+    fetch('https://api.github.com/repos/giannisalvatore/osm')
+      .then(r => r.json())
+      .then(d => {
+        const n = d.stargazers_count;
+        if (typeof n === 'number') {
+          sessionStorage.setItem('gh-stars', String(n));
+          setStars(n);
+        }
+      })
+      .catch(() => {});
+  }
+</script>

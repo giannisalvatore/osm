@@ -1,0 +1,21 @@
+{
+  "name": "osm-discovery",
+  "version": "1.0.0",
+  "description": "OSM Discovery — crawls GitHub for SKILL.md files and auto-imports them into the registry",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@koa/router": "^12.0.1",
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "js-yaml": "^4.1.0",
+    "koa": "^2.15.3",
+    "mysql2": "^3.10.1",
+    "sequelize": "^6.37.3",
+    "tar-stream": "^3.1.7"
+  }
+}

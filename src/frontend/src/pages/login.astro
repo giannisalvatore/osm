@@ -1,0 +1,51 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+---
+
+<AppLayout title="Sign In – OSM">
+  <div class="auth-content">
+
+    <a href="/" class="back-link">← Back</a>
+
+    <div class="detail-hero">
+      <h1 class="detail-name">Sign In</h1>
+      <p class="detail-description">Authenticate via the OSM CLI.</p>
+    </div>
+
+    <div class="detail-section">
+      <div class="install-row">
+        <code class="install-code">osm login</code>
+        <button
+          class="copy-btn"
+          onclick="navigator.clipboard.writeText('osm login').then(() => { this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy', 2000); })"
+        >Copy</button>
+      </div>
+    </div>
+
+    <p class="auth-footer-link">Don't have an account? <a href="/signup">Sign Up</a></p>
+
+  </div>
+</AppLayout>
+
+<style is:global>
+  .auth-content {
+    max-width: 700px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .auth-footer-link {
+    font-size: 13px;
+    color: var(--color-gray-text);
+    letter-spacing: -0.3px;
+    margin: 0;
+  }
+
+  .auth-footer-link a {
+    color: var(--color-black);
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .auth-footer-link a:hover { text-decoration: underline; }
+</style>

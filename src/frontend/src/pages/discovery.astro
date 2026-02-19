@@ -1,0 +1,78 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+
+const DISCOVERY_URL = import.meta.env.PUBLIC_DISCOVERY_URL || 'https://discovery.osmagent.com';
+---
+
+<AppLayout title="Discovery – OSM">
+  <div class="discovery-content">
+
+    <h1 class="discovery-title">OSM discovery</h1>
+
+    <div class="stats-grid">
+      <div class="stat-row">
+        <span class="stat-label">Skills discovered from GitHub</span>
+        <span class="stat-value" id="stat-discovered">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Skills published by users</span>
+        <span class="stat-value" id="stat-uploaded">—</span>
+      </div>
+    </div>
+
+  </div>
+</AppLayout>
+
+<script define:vars={{ DISCOVERY_URL }}>
+  async function loadStats() {
+    try {
+      const res  = await fetch(`${DISCOVERY_URL}/stats`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const fmt  = n => typeof n === 'number' ? n.toLocaleString('en-US') : '—';
+      document.getElementById('stat-discovered').textContent = fmt(data.skills_discovered);
+      document.getElementById('stat-uploaded').textContent   = fmt(data.skills_user_uploaded);
+    } catch { /* leave dashes */ }
+  }
+  loadStats();
+</script>
+
+<style is:global>
+  .discovery-content {
+    max-width: 700px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .discovery-title {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--color-gray-text);
+    margin: 0 0 30px;
+    letter-spacing: -0.3px;
+  }
+
+  .stats-grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--color-gray-border);
+    font-size: 14px;
+    letter-spacing: -0.3px;
+  }
+
+  .stat-label {
+    color: var(--color-gray-text);
+  }
+
+  .stat-value {
+    color: var(--color-black);
+    font-weight: 700;
+  }
+</style>

@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.env.local
+npm-debug.log*
+*.log
+.DS_Store
+src/frontend/node_modules
+src/backend/node_modules
+src/cli/node_modules
+deploy/traefik/acme.json

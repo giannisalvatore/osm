@@ -1,0 +1,109 @@
+services:
+
+  # ── Backend ───────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./src/backend
+    container_name: osm-backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      PORT: 3000
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      PUBLIC_API_URL: ${PUBLIC_API_URL}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.osmagent.com`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.backend.loadbalancer.server.port=3000"
+
+  # ── Frontend ──────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: ./src/frontend/Dockerfile
+      args:
+        PUBLIC_API_URL: ${PUBLIC_API_URL}
+    container_name: osm-frontend
+    restart: unless-stopped
+    environment:
+      API_URL: http://backend:3000
+      PUBLIC_API_URL: ${PUBLIC_API_URL}
+      HOST: 0.0.0.0
+      PORT: 4321
+    depends_on:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      # ── www.osmagent.com → frontend ──────────────────────────────────────
+      - "traefik.http.routers.frontend.rule=Host(`www.osmagent.com`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=4321"
+      # ── osmagent.com → redirect to www ───────────────────────────────────
+      - "traefik.http.routers.frontend-nowww.rule=Host(`osmagent.com`)"
+      - "traefik.http.routers.frontend-nowww.entrypoints=websecure"
+      - "traefik.http.routers.frontend-nowww.tls=true"
+      - "traefik.http.routers.frontend-nowww.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.frontend-nowww.middlewares=redirect-to-www"
+      - "traefik.http.middlewares.redirect-to-www.redirectregex.regex=^https://osmagent\\.com/(.*)"
+      - "traefik.http.middlewares.redirect-to-www.redirectregex.replacement=https://www.osmagent.com/$${1}"
+      - "traefik.http.middlewares.redirect-to-www.redirectregex.permanent=true"
+
+  # ── Discovery (GitHub SKILL.md crawler) ──────────────────────────────────
+  discovery:
+    build:
+      context: ./src/discovery
+    container_name: osm-discovery
+    restart: unless-stopped
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      PORT: 4000
+    depends_on:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.discovery.rule=Host(`discovery.osmagent.com`)"
+      - "traefik.http.routers.discovery.entrypoints=websecure"
+      - "traefik.http.routers.discovery.tls.certresolver=letsencrypt"
+      - "traefik.http.services.discovery.loadbalancer.server.port=4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── Traefik (reverse proxy + SSL automatico) ──────────────────────────────
+  traefik:
+    image: traefik:v3
+    container_name: osm-traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./deploy/traefik/acme.json:/acme.json
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/acme.json"
+

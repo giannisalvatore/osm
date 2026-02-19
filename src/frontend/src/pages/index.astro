@@ -1,0 +1,275 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'https://api.osmagent.com';
+const DISCOVERY_URL = import.meta.env.PUBLIC_DISCOVERY_URL || 'https://discovery.osmagent.com';
+---
+
+<AppLayout title="OSM">
+  <div class="home-content">
+
+      <div class="mode-toggle-wrap">
+        <div class="mode-toggle">
+          <span class="mode-option active" id="modeHuman">i'm human</span>
+          <span class="mode-divider">/</span>
+          <a href="/agent" class="mode-option" id="modeAgent">i'm an agent</a>
+        </div>
+      </div>
+      
+      <div class="search-section">
+        <form class="search-box" id="searchForm">
+          <input type="text" id="searchInput" placeholder="Search skill..." autocomplete="off" />
+          <button type="submit">Search</button>
+        </form>
+      </div>
+
+      <div class="repo-hint" id="repoHint"></div>
+
+      <div class="search-results" id="searchResults" style="display:none">
+        <h2>Results</h2>
+        <div class="search-results-list" id="searchResultsList"></div>
+      </div>
+
+      <div class="skills-grid" id="skillsGrid">
+        
+        <div class="skills-column">
+          <h2>Last 10 published skills</h2>
+          <div class="skills-list" id="latestList">
+            <div class="skill-item skeleton"><span class="skill-number">—</span><span class="skill-name loading-text">Loading...</span><span class="skill-spacer"></span></div>
+          </div>
+        </div>
+
+        <div class="skills-column">
+          <h2>Most downloaded skills</h2>
+          <div class="skills-list" id="popularList">
+            <div class="skill-item skeleton"><span class="skill-number">—</span><span class="skill-name loading-text">Loading...</span><span class="skill-spacer"></span></div>
+          </div>
+        </div>
+
+      </div>
+
+  </div>
+</AppLayout>
+
+<style is:global>
+  .home-content {
+    width: 100%;
+  }
+
+  /* Search Section */
+  .search-section {
+    margin-bottom: 60px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .search-box {
+    width: 100%;
+    max-width: 700px;
+    height: 70px;
+    border: 1px solid var(--color-black);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    transition: border-color 0.2s;
+  }
+
+  .search-box:hover, .search-box:focus-within {
+    border-color: var(--color-black);
+  }
+
+  .search-box input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--color-black);
+    background: transparent;
+    letter-spacing: -0.5px;
+    font-weight: 700;
+  }
+
+  .search-box input::placeholder {
+    color: var(--color-gray-text);
+  }
+
+  .search-box button {
+    background: none;
+    border: none;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 16px;
+    letter-spacing: -0.5px;
+  }
+
+  /* Skills Grid */
+  .skills-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    max-width: 700px;
+    margin: 0 auto 80px;
+  }
+
+  @media (max-width: 768px) {
+    .skills-grid {
+      grid-template-columns: 1fr;
+      gap: 60px;
+      margin-bottom: 20px;
+    }
+  }
+
+  /* Search Results */
+  .search-results {
+    max-width: 700px;
+    margin: 0 auto 80px;
+    width: 100%;
+  }
+
+  .search-results-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .loading-text { color: var(--color-gray-text); }
+
+  .repo-hint {
+    max-width: 700px;
+    margin: -44px auto 60px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--color-gray-text);
+    letter-spacing: -0.2px;
+    min-height: 14px;
+  }
+</style>
+
+<script define:vars={{ API_URL, DISCOVERY_URL }}>
+
+  const DOWNLOAD_SVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  function formatCount(n) {
+    return n >= 1000 ? (n / 1000).toFixed(0) + 'k' : String(n || 0);
+  }
+
+  function renderSkillList(container, skills) {
+    container.innerHTML = '';
+    if (!skills || skills.length === 0) {
+      container.innerHTML = '<div class="empty-state">No skills found</div>';
+      return;
+    }
+    skills.forEach((skill, index) => {
+      const a = document.createElement('a');
+      a.href = '/skill/' + skill.name;
+      a.className = 'skill-item';
+      a.innerHTML = `
+        <span class="skill-number">${String(index + 1).padStart(2, '0')}</span>
+        <span class="skill-name">${skill.name}</span>
+        <span class="skill-spacer"></span>
+        <span class="skill-downloads">${DOWNLOAD_SVG}${formatCount(skill.downloads || 0)}</span>
+      `;
+      container.appendChild(a);
+    });
+  }
+
+  async function loadSkills() {
+    const latestList  = document.getElementById('latestList');
+    const popularList = document.getElementById('popularList');
+
+    try {
+      const [resLatest, resPopular] = await Promise.all([
+        fetch(`${API_URL}/registry/skills/last10`),
+        fetch(`${API_URL}/registry/skills/mostDownloaded`),
+      ]);
+      const [dataLatest, dataPopular] = await Promise.all([
+        resLatest.json(),
+        resPopular.json(),
+      ]);
+      renderSkillList(latestList,  dataLatest.objects  || []);
+      renderSkillList(popularList, dataPopular.objects || []);
+    } catch {
+      renderSkillList(latestList,  []);
+      renderSkillList(popularList, []);
+    }
+  }
+
+  loadSkills();
+
+  // ── Repo count hint ───────────────────────────────────────────────────────
+  (async () => {
+    try {
+      const res  = await fetch(`${DISCOVERY_URL}/stats`);
+      if (!res.ok) return;
+      const data = await res.json();
+      document.getElementById('repoHint').textContent = `${data.total_skills} skills`;
+    } catch (err) {  }
+  })();
+
+  // ── Search ─────────────────────────────────────────────────────────────────
+
+  const input            = document.getElementById('searchInput');
+  const form             = document.getElementById('searchForm');
+  const grid             = document.getElementById('skillsGrid');
+  const resultsContainer = document.getElementById('searchResults');
+  const resultsList      = document.getElementById('searchResultsList');
+
+  let debounceTimer = null;
+
+  function renderResults(skills) {
+    resultsList.innerHTML = '';
+    if (!skills || skills.length === 0) {
+      resultsList.innerHTML = '<div class="empty-state">No skills found</div>';
+      return;
+    }
+    skills.forEach((skill, index) => {
+      const a = document.createElement('a');
+      a.href = '/skill/' + skill.name;
+      a.className = 'skill-item';
+      a.innerHTML = `
+        <span class="skill-number">${String(index + 1).padStart(2, '0')}</span>
+        <span class="skill-name">${skill.name}</span>
+        <span class="skill-spacer"></span>
+        <span class="skill-downloads">${DOWNLOAD_SVG}${formatCount(skill.downloads || 0)}</span>
+      `;
+      resultsList.appendChild(a);
+    });
+  }
+
+  async function doSearch(query) {
+    try {
+      const res  = await fetch(`${API_URL}/registry/search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      renderResults(data.objects || []);
+    } catch {
+      resultsList.innerHTML = '<div class="empty-state">Error connecting to API</div>';
+    }
+  }
+
+  input.addEventListener('input', () => {
+    const val = input.value.trim();
+    clearTimeout(debounceTimer);
+
+    if (val.length === 0) {
+      grid.style.display = '';
+      resultsContainer.style.display = 'none';
+      resultsList.innerHTML = '';
+      return;
+    }
+
+    grid.style.display = 'none';
+    resultsContainer.style.display = 'block';
+    resultsList.innerHTML = '<div class="skill-item"><span class="skill-number">—</span><span class="skill-name loading-text">Loading...</span><span class="skill-spacer"></span></div>';
+
+    debounceTimer = setTimeout(() => doSearch(val), 200);
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const val = input.value.trim();
+    if (val.length > 0) doSearch(val);
+  });
+</script>
