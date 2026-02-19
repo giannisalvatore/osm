@@ -64,19 +64,6 @@ function dirOf(skillMdPath) {
  *   the skill is skipped immediately with zero additional API calls.
  */
 export async function importSkill(repoFullName, skillMdPath, repoInfo, repoTree = null, skillMdSha = null) {
-  // ── 0. Fast SHA-based skip ──────────────────────────────────────────────────
-  // The git tree already tells us the blob SHA of every file. If the SHA
-  // matches what we stored last time, nothing in this skill has changed—
-  // skip with zero extra API calls.
-  if (skillMdSha) {
-    const githubUrlFast = `https://github.com/${repoFullName}/blob/${repoInfo.default_branch}/${skillMdPath}`;
-    const existingFast  = await Package.findOne({ where: { github_url: githubUrlFast } });
-    if (existingFast?.skillmd_sha === skillMdSha) {
-      // File unchanged — nothing to do.
-      return existingFast.name;
-    }
-  }
-
   // ── 1. Fetch and parse SKILL.md ───────────────────────────────────────────
   const rawContent = await getFileContent(repoFullName, skillMdPath);
   if (!rawContent) {
@@ -106,47 +93,46 @@ export async function importSkill(repoFullName, skillMdPath, repoInfo, repoTree 
   }
 
   // ── 3. Deduplicate / update check ────────────────────────────────────────
-  // Compute the version now so we can compare before doing any heavy work.
+  // Primary key is the skill NAME from frontmatter — not the github_url.
+  // This prevents name-2, name-3 duplicates when the same skill appears in
+  // multiple repos or when a re-scan finds the URL slightly different.
   const version   = String(frontmatter.metadata?.version ?? '1.0.0');
   const githubUrl = `https://github.com/${repoFullName}/blob/${repoInfo.default_branch}/${skillMdPath}`;
 
-  // SHA-based dedup: if ANY package already stores this SKILL.md SHA, the
-  // content is identical — skip and return the existing name.
-  // This handles cases where the base name is taken by a manually-published
-  // skill (skillmd_sha = null), causing duplicates like name-2, name-3, …
-  if (skillMdSha) {
-    const existingBySha = await Package.findOne({ where: { skillmd_sha: skillMdSha } });
-    if (existingBySha) {
-      console.log(`[importer] SHA ${skillMdSha} already imported as "${existingBySha.name}" — skipping`);
-      return existingBySha.name;
-    }
-  }
-
-  const existing  = await Package.findOne({ where: { github_url: githubUrl } });
+  // Look up by name first (canonical identifier)
+  const existing = await Package.findOne({ where: { name: rawName } });
 
   if (existing) {
-    // Same version — nothing to do.
-    if (existing.latest_version === version) {
+    // SHA unchanged — nothing to do (fastest path)
+    if (skillMdSha && existing.skillmd_sha === skillMdSha) {
+      console.log(`[importer] "${rawName}" unchanged (SHA match) — skipping`);
+      return existing.name;
+    }
+    // Same version and no SHA to compare — nothing to do
+    if (existing.latest_version === version && !skillMdSha) {
       console.log(`[importer] "${existing.name}" is already at v${version} — skipping`);
       return existing.name;
     }
-    // New version — check it isn't already recorded.
+    // Check version already recorded
     const alreadyHasVersion = await PackageVersion.findOne({
       where: { package_id: existing.id, version },
     });
     if (alreadyHasVersion) {
-      // Version row exists but latest_version pointer was stale — fix it.
-      await Package.update({ latest_version: version }, { where: { id: existing.id } });
-      console.log(`[importer] "${existing.name}" version pointer updated to v${version}`);
+      // Update SHA pointer if we now have it
+      if (skillMdSha && existing.skillmd_sha !== skillMdSha) {
+        await Package.update({ skillmd_sha: skillMdSha }, { where: { id: existing.id } });
+      }
+      console.log(`[importer] "${existing.name}" already at v${version} — skipping`);
       return existing.name;
     }
-    // Genuine update: fall through to build the tarball, then upsert below.
+    // Genuine update: fall through to build tarball
     console.log(`[importer] "${existing.name}" updating ${existing.latest_version} → v${version}`);
   }
 
-  // ── 4. Resolve a free skill name ──────────────────────────────────────────
-  // Re-use the existing name if updating, otherwise find a free one.
-  const skillName = existing ? existing.name : await findAvailableName(rawName);
+  // ── 4. Resolve skill name ─────────────────────────────────────────────────
+  // Always reuse the existing name if found; only allocate a new one if this
+  // skill has never been imported before.
+  const skillName = existing ? existing.name : rawName;
 
   // ── 4. Collect files for the tarball ──────────────────────────────────────
   const skillDir = dirOf(skillMdPath); // "" for root, "path/to/dir" otherwise
