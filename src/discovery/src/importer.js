@@ -109,6 +109,18 @@ export async function importSkill(repoFullName, skillMdPath, repoInfo, repoTree 
   // Compute the version now so we can compare before doing any heavy work.
   const version   = String(frontmatter.metadata?.version ?? '1.0.0');
   const githubUrl = `https://github.com/${repoFullName}/blob/${repoInfo.default_branch}/${skillMdPath}`;
+
+  // SHA-based dedup by name: if a package with this name already exists and
+  // its SKILL.md SHA matches the incoming one, the content is identical —
+  // skip regardless of where the file is hosted (avoids name-2, name-3…).
+  if (skillMdSha) {
+    const existingByName = await Package.findOne({ where: { name: rawName } });
+    if (existingByName?.skillmd_sha === skillMdSha) {
+      console.log(`[importer] "${rawName}" unchanged (SHA match by name) — skipping`);
+      return existingByName.name;
+    }
+  }
+
   const existing  = await Package.findOne({ where: { github_url: githubUrl } });
 
   if (existing) {
