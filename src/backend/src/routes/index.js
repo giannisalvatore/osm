@@ -14,6 +14,7 @@ router.get('/auth/whoami', authController.whoami);
 
 router.get('/registry/skills/last10',        registryController.last10);
 router.get('/registry/skills/mostDownloaded', registryController.mostDownloaded);
+router.get('/registry/sitemap',              registryController.sitemap);
 router.get('/registry/list',                 registryController.list);
 router.get('/registry/search',               registryController.search);
 router.get('/registry/mine',                 registryController.mine);

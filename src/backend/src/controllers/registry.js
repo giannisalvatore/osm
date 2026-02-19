@@ -332,6 +332,14 @@ export const registryController = {
 
     ctx.body = { total: rows.length, objects: rows };
   },
+
+  async sitemap(ctx) {
+    const rows = await Package.findAll({
+      order: [['name', 'ASC']],
+      attributes: ['name'],
+    });
+    ctx.body = { total: rows.length, skills: rows.map(r => r.name) };
+  },
 };
 
 export const authController = {

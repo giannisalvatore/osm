@@ -17,12 +17,12 @@ export const GET: APIRoute = async () => {
   let skillUrls: { url: string; changefreq: string; priority: string }[] = [];
 
   try {
-    const res  = await fetch(`${API_URL}/registry/search?q=`);
+    const res  = await fetch(`${API_URL}/registry/sitemap`);
     const data = await res.json();
-    const skills: { name: string }[] = data.objects || [];
+    const skills: string[] = data.skills || [];
 
-    skillUrls = skills.map(s => ({
-      url:        `/skill/${encodeURIComponent(s.name)}`,
+    skillUrls = skills.map(name => ({
+      url:        `/skill/${encodeURIComponent(name)}`,
       changefreq: 'weekly',
       priority:   '0.6',
     }));
