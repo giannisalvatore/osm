@@ -1,20 +1,45 @@
 ---
 interface Props {
   title?: string;
+  description?: string;
+  image?: string;
+  url?: string;
 }
 
-const { title } = Astro.props;
+const { 
+  title = 'OSM', 
+  description = 'OSM (Open Skills Manager) - An agent skills registry. Discover, share, and manage AI agent skills.',
+  image = 'https://osmagent.com/og-image.png',
+  url = Astro.url.href
+} = Astro.props;
+
+const siteTitle = title === 'OSM' ? title : `${title} · OSM`;
 ---
 
 <!doctype html>
-<html lang="it">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="description" content="OSMAgent - Open Skills Marketplace" />
+    <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width" />
+    
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={siteTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={image} />
+    <meta property="og:url" content={url} />
+    <meta property="og:site_name" content="OSM" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={siteTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={image} />
+    
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
-    <title>{title || 'OSM'}</title>
+    <title>{siteTitle}</title>
     <script is:inline>
       (function() {
         try {

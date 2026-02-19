@@ -7,13 +7,16 @@ import Layout from './Layout.astro';
 
 interface Props {
   title?: string;
+  description?: string;
+  image?: string;
+  url?: string;
 }
 
-const { title } = Astro.props;
+const { title, description, image, url } = Astro.props;
 const currentPath = Astro.url.pathname;
 ---
 
-<Layout title={title}>
+<Layout title={title} description={description} image={image} url={url}>
   <div class="app-shell">
 
     <header class="app-header">

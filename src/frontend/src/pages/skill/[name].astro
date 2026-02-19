@@ -2,9 +2,41 @@
 import AppLayout from '../../layouts/AppLayout.astro';
 
 const API_URL = import.meta.env.PUBLIC_API_URL || 'https://api.osmagent.com';
+const skillName = Astro.params.name || '';
+
+// SSR: Fetch skill data for SEO
+let skillData = null;
+let filesData = null;
+let pageTitle = 'OSM';
+let pageDescription = 'OSM (Open Skills Manager) - An agent skills registry. Discover, share, and manage AI agent skills.';
+
+try {
+  const [metaRes, filesRes] = await Promise.all([
+    fetch(`${API_URL}/registry/${encodeURIComponent(skillName)}`),
+    fetch(`${API_URL}/registry/${encodeURIComponent(skillName)}/files`)
+  ]);
+  
+  if (metaRes.ok) {
+    const data = await metaRes.json();
+    if (!data.error) {
+      skillData = data;
+      const latestVersion = data['dist-tags']?.latest || Object.keys(data.versions || {})[0];
+      const versionData = data.versions?.[latestVersion] || {};
+      
+      pageTitle = data.name;
+      pageDescription = data.description || versionData.description || `${data.name} - An agent skill`;
+    }
+  }
+  
+  if (filesRes.ok) {
+    filesData = await filesRes.json();
+  }
+} catch (error) {
+  console.error('Error fetching skill data for SEO:', error);
+}
 ---
 
-<AppLayout title="OSM">
+<AppLayout title={pageTitle} description={pageDescription}>
   <div class="detail-content">
 
     <a href="/" class="back-link">← Back</a>
@@ -343,15 +375,20 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'https://api.osmagent.com';
   }
 </style>
 
-<script define:vars={{ API_URL }}>
+<script define:vars={{ API_URL, skillData, filesData, skillName }}>
   window.__OSM_API_URL__ = API_URL;
+  window.__OSM_SKILL_DATA__ = skillData;
+  window.__OSM_FILES_DATA__ = filesData;
+  window.__OSM_SKILL_NAME__ = skillName;
 </script>
 
 <script>
   import { marked } from 'marked';
 
   const API_URL   = window.__OSM_API_URL__ || 'http://localhost:3000';
-  const skillName = decodeURIComponent(window.location.pathname.split('/skill/')[1] || '');
+  const skillName = window.__OSM_SKILL_NAME__ || decodeURIComponent(window.location.pathname.split('/skill/')[1] || '');
+  const ssrSkillData = window.__OSM_SKILL_DATA__;
+  const ssrFilesData = window.__OSM_FILES_DATA__;
 
   const elLoading  = document.getElementById('skill-loading');
   const elError    = document.getElementById('skill-error');
@@ -368,13 +405,24 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'https://api.osmagent.com';
 
   async function load() {
     try {
-      const [metaRes, filesRes] = await Promise.all([
-        fetch(`${API_URL}/registry/${encodeURIComponent(skillName)}`),
-        fetch(`${API_URL}/registry/${encodeURIComponent(skillName)}/files`),
-      ]);
+      // Use SSR data if available, otherwise fetch
+      let data, filesData;
+      
+      if (ssrSkillData) {
+        data = ssrSkillData;
+        filesData = ssrFilesData || { files: [], contents: {} };
+      } else {
+        const [metaRes, filesRes] = await Promise.all([
+          fetch(`${API_URL}/registry/${encodeURIComponent(skillName)}`),
+          fetch(`${API_URL}/registry/${encodeURIComponent(skillName)}/files`),
+        ]);
 
-      const data = await metaRes.json();
-      if (!metaRes.ok || data.error) throw new Error(data.error || 'Skill not found');
+        data = await metaRes.json();
+        if (!metaRes.ok || data.error) throw new Error(data.error || 'Skill not found');
+        filesData = filesRes.ok ? await filesRes.json() : { files: [], contents: {} };
+      }
+
+      if (data.error) throw new Error(data.error || 'Skill not found');
 
       const latestVersion = data['dist-tags']?.latest || Object.keys(data.versions || {})[0];
       const versionData   = data.versions?.[latestVersion] || {};
@@ -421,14 +469,13 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'https://api.osmagent.com';
         });
       });
 
-      if (filesRes.ok) {
-        const filesData = await filesRes.json();
-        const fileList  = filesData.files || [];
-        const contents  = filesData.contents || {};
-        const readmeKey  = Object.keys(contents).find(k => /readme/i.test(k));
-        const skillMdKey = Object.keys(contents).find(k => /skill\.md$/i.test(k));
+      // Files and tabs
+      const fileList  = filesData.files || [];
+      const contents  = filesData.contents || {};
+      const readmeKey  = Object.keys(contents).find(k => /readme/i.test(k));
+      const skillMdKey = Object.keys(contents).find(k => /skill\.md$/i.test(k));
 
-        if (fileList.length > 0 || readmeKey || skillMdKey) {
+      if (fileList.length > 0 || readmeKey || skillMdKey) {
           show(document.getElementById('tabs-section'));
 
           const readmeEl = document.getElementById('readme-content');
@@ -468,7 +515,6 @@ const API_URL = import.meta.env.PUBLIC_API_URL || 'https://api.osmagent.com';
             fileTree.outerHTML = '<p class="tab-empty">No files available.</p>';
           }
         }
-      }
 
       hide(elLoading);
       show(elBody);

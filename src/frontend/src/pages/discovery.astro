@@ -4,7 +4,10 @@ import AppLayout from '../layouts/AppLayout.astro';
 const DISCOVERY_URL = import.meta.env.PUBLIC_DISCOVERY_URL || 'https://discovery.osmagent.com';
 ---
 
-<AppLayout title="Discovery – OSM">
+<AppLayout 
+  title="Discovery"
+  description="OSM Discovery automatically imports open-source agent skills from GitHub. Explore community-built skills for AI agents."
+>
   <div class="discovery-content">
 
     <h1 class="discovery-title">OSM discovery</h1>
