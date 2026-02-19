@@ -108,16 +108,18 @@ export async function getRepo(fullName) {
 }
 
 /**
- * Search GitHub repositories that contain SKILL.md, sorted by stars desc.
- * Each item in the response is a full repository object (includes stars,
- * license, default_branch, etc.) — no separate getRepo() call needed.
+ * Search GitHub code for SKILL.md files.
+ * Each item contains { name, path, sha, repository {...} }.
+ * The repository object is incomplete (no stars/license/default_branch) so
+ * requires a separate getRepo() call.
  * Returns the raw API response ({ total_count, items }).
+ *
+ * @param {number} page
+ * @param {number} perPage
  */
-export async function searchRepos(page = 1, perPage = 30) {
-  return request('/search/repositories', {
-    q:        'SKILL.md',
-    sort:     'stars',
-    order:    'desc',
+export async function searchCode(page = 1, perPage = 30) {
+  return request('/search/code', {
+    q:        'filename:SKILL.md',
     per_page: perPage,
     page,
   }, /* isSearch */ true);

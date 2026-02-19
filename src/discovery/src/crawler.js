@@ -1,32 +1,34 @@
 /**
  * Discovery crawler.
  *
- * Uses GET /search/repositories?q=SKILL.md&sort=stars&order=desc
+ * Uses GET /search/code?q=filename:SKILL.md
  *
- * Results are already sorted by stars descending, and each item already
- * contains the full repository object (stars, license, default_branch) —
- * so no separate getRepo() call is needed.
+ * The code search API returns individual file results (each containing path,
+ * sha, and a partial repository object). We group results by repository,
+ * fetch full repo metadata (stars, license, default_branch) via getRepo(),
+ * and import each discovered SKILL.md.
  *
  * Algorithm per cycle
  * ───────────────────
- *  1. Fetch page N (30 repos at a time), stars high → low.
- *  2. Skip repos already in discovered_repos.
- *  3. Gate on licence.
- *  4. Walk the full git tree to find every SKILL.md in the repo.
- *  5. Import each skill.
- *  6. Mark repo as done.
- *  7. Advance to next page; when exhausted wait IDLE_WAIT_MS and restart.
+ *  1. Fetch page N (30 code results at a time).
+ *  2. Group files by repository.
+ *  3. For each repository:
+ *     a. Fetch full repo metadata (stars, license, default_branch).
+ *     b. Gate on license.
+ *     c. Import each SKILL.md found in that repo.
+ *     d. Mark repo as done.
+ *  4. Advance to next page; when exhausted wait IDLE_WAIT_MS and restart.
  *
  * Rate limits
  * ───────────
  *  Search API: 30 req/min authenticated → SEARCH_DELAY_MS between pages.
- *  Core API (tree + file downloads): self-throttled via X-RateLimit-* headers.
+ *  Core API (getRepo + file downloads): self-throttled via X-RateLimit-* headers.
  */
 
-import { searchRepos, getRepo, getTree, sleep } from './github.js';
-import { isLicenseAllowed }            from './license.js';
-import { importSkill }                 from './importer.js';
-import { DiscoveredRepo }              from './db.js';
+import { searchCode, getRepo, getTree, sleep } from './github.js';
+import { isLicenseAllowed }                    from './license.js';
+import { importSkill }                         from './importer.js';
+import { DiscoveredRepo }                      from './db.js';
 
 // ── Seed repos (manually curated, imported at startup) ───────────────────────
 // Add any GitHub repos here that won't surface via the SKILL.md search API.
@@ -36,7 +38,7 @@ const SEED_REPOS = [
 ];
 
 // ── Tuning ────────────────────────────────────────────────────────────────────
-const PER_PAGE        = 30;              // repos per search page
+const PER_PAGE        = 30;              // code results per search page
 const SEARCH_DELAY_MS = 1000;           // gap between search page requests
 const SKILL_DELAY_MS  = 50;             // gap between skill imports within a repo
 const REPO_DELAY_MS   = 100;             // gap between repos on the same page
@@ -44,6 +46,9 @@ const IDLE_WAIT_MS    = 5 * 60 * 1000;  // wait after no new repos found (5 min)
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/**
+ * Helper for seed repos: extract SKILL.md paths from a git tree.
+ */
 function findSkillMdPaths(tree) {
   return (tree?.tree ?? [])
     .filter(item => item.type === 'blob' && /(?:^|\/)SKILL\.md$/i.test(item.path))
@@ -68,46 +73,45 @@ async function markAnalyzed(repoFullName, stars, skillsFound) {
 
 // ── Process a single repo ─────────────────────────────────────────────────────
 
-async function processRepo(repoInfo) {
-  const fullName = repoInfo.full_name;
-  const stars    = repoInfo.stargazers_count ?? 0;
-
+/**
+ * Process a repository and import all the given SKILL.md files.
+ *
+ * @param {string} repoFullName   e.g. "octocat/hello-world"
+ * @param {Array} skillFiles      [{path, sha}, ...] from code search results
+ */
+async function processRepo(repoFullName, skillFiles) {
   // Already analyzed?
-  const already = await DiscoveredRepo.findOne({ where: { repo_full_name: fullName } });
+  const already = await DiscoveredRepo.findOne({ where: { repo_full_name: repoFullName } });
   if (already) return;
 
-  console.log(`[crawler] → ${fullName} (★${stars})`);
+  // Fetch full repository metadata (stars, license, default_branch)
+  let repoInfo;
+  try {
+    repoInfo = await getRepo(repoFullName);
+  } catch (err) {
+    console.error(`[crawler] Could not fetch ${repoFullName}: ${err.message}`);
+    await markAnalyzed(repoFullName, 0, 0);
+    return;
+  }
 
-  // Licence gate (license object already in repoInfo from search result)
+  const stars = repoInfo.stargazers_count ?? 0;
+  console.log(`[crawler] → ${repoFullName} (★${stars})`);
+
+  // License gate
   if (!isLicenseAllowed(repoInfo.license)) {
     const lic = repoInfo.license?.spdx_id ?? 'none';
-    console.log(`[crawler]   skip — licence not allowed (${lic})`);
-    await markAnalyzed(fullName, stars, 0);
+    console.log(`[crawler]   skip — license not allowed (${lic})`);
+    await markAnalyzed(repoFullName, stars, 0);
     return;
   }
 
-  // Walk full git tree to find every SKILL.md (handles multi-skill repos)
-  let skillPaths = [];
-  let tree       = null;
-  try {
-    tree       = await getTree(fullName, repoInfo.default_branch);
-    skillPaths = findSkillMdPaths(tree);
-  } catch (err) {
-    console.log(`[crawler]   warning — tree unavailable: ${err.message}`);
-  }
-
-  if (skillPaths.length === 0) {
-    console.log(`[crawler]   no SKILL.md found in tree — skipping`);
-    await markAnalyzed(fullName, stars, 0);
-    return;
-  }
-
-  console.log(`[crawler]   found ${skillPaths.length} SKILL.md file(s) — importing…`);
+  console.log(`[crawler]   found ${skillFiles.length} SKILL.md file(s) — importing…`);
 
   let imported = 0;
-  for (const { path: skillPath, sha: skillMdSha } of skillPaths) {
+  for (const { path: skillPath, sha: skillMdSha } of skillFiles) {
     try {
-      const name = await importSkill(fullName, skillPath, repoInfo, tree, skillMdSha);
+      // Pass null for repoTree since we don't have it (code search doesn't provide tree)
+      const name = await importSkill(repoFullName, skillPath, repoInfo, null, skillMdSha);
       if (name) imported++;
     } catch (err) {
       console.error(`[crawler]   error importing ${skillPath}: ${err.message}`);
@@ -115,8 +119,8 @@ async function processRepo(repoInfo) {
     await sleep(SKILL_DELAY_MS);
   }
 
-  await markAnalyzed(fullName, stars, imported);
-  console.log(`[crawler]   ✓ ${fullName} — ${imported}/${skillPaths.length} skill(s) imported`);
+  await markAnalyzed(repoFullName, stars, imported);
+  console.log(`[crawler]   ✓ ${repoFullName} — ${imported}/${skillFiles.length} skill(s) imported`);
 }
 
 // ── Main loop ─────────────────────────────────────────────────────────────────
@@ -193,8 +197,8 @@ export async function runCrawler() {
   while (true) {
     let result;
     try {
-      console.log(`[crawler] Fetching page ${page} (${PER_PAGE} repos, ★ desc)…`);
-      result = await searchRepos(page, PER_PAGE);
+      console.log(`[crawler] Fetching page ${page} (${PER_PAGE} code results)…`);
+      result = await searchCode(page, PER_PAGE);
     } catch (err) {
       console.error(`[crawler] Search error: ${err.message} — retrying in 30s`);
       await sleep(30_000);
@@ -202,7 +206,7 @@ export async function runCrawler() {
     }
 
     const items = result.items ?? [];
-    console.log(`[crawler] Page ${page}: ${items.length} repo(s) (GitHub total: ${result.total_count})`);
+    console.log(`[crawler] Page ${page}: ${items.length} file(s) (GitHub total: ${result.total_count})`);
 
     if (items.length === 0) {
       console.log(`[crawler] No results. Waiting ${IDLE_WAIT_MS / 60_000} min before restarting…`);
@@ -211,23 +215,39 @@ export async function runCrawler() {
       continue;
     }
 
-    // Process each repo in the page (already star-sorted by GitHub)
+    // Group files by repository
+    const repoMap = new Map(); // fullName → [{path, sha}, ...]
+    for (const item of items) {
+      const fullName = item.repository?.full_name;
+      if (!fullName) continue;
+      if (!repoMap.has(fullName)) {
+        repoMap.set(fullName, []);
+      }
+      repoMap.get(fullName).push({
+        path: item.path,
+        sha:  item.sha ?? null,
+      });
+    }
+
+    console.log(`[crawler] Page ${page}: ${repoMap.size} unique repo(s)`);
+
+    // Process each unique repository
     let newOnThisPage = 0;
-    for (const repoInfo of items) {
+    for (const [fullName, skillFiles] of repoMap.entries()) {
       try {
-        const before = await DiscoveredRepo.findOne({ where: { repo_full_name: repoInfo.full_name } });
+        const before = await DiscoveredRepo.findOne({ where: { repo_full_name: fullName } });
         if (!before) newOnThisPage++;
-        await processRepo(repoInfo);
+        await processRepo(fullName, skillFiles);
       } catch (err) {
-        console.error(`[crawler] Unhandled error for ${repoInfo.full_name}: ${err.message}`);
-        await markAnalyzed(repoInfo.full_name, repoInfo.stargazers_count ?? 0, 0);
+        console.error(`[crawler] Unhandled error for ${fullName}: ${err.message}`);
+        await markAnalyzed(fullName, 0, 0);
       }
       await sleep(REPO_DELAY_MS);
     }
 
     console.log(`[crawler] Page ${page}: ${newOnThisPage} new repo(s) processed.`);
 
-    // Last page from GitHub or no more results → cycle complete, wait and restart
+    // Last page → cycle complete, wait and restart
     if (items.length < PER_PAGE) {
       console.log(`[crawler] All pages exhausted. Waiting ${IDLE_WAIT_MS / 60_000} min before restarting…`);
       page = 1;
