@@ -126,6 +126,25 @@ export async function searchCode(page = 1, perPage = 30) {
 }
 
 /**
+ * Search GitHub repositories.
+ * Returns full repository objects (with stars, license, default_branch, etc.).
+ * Returns the raw API response ({ total_count, items }).
+ *
+ * @param {string} query - Search query (e.g., "skill created:2024-01-01..2024-01-31")
+ * @param {number} page
+ * @param {number} perPage
+ */
+export async function searchRepositories(query, page = 1, perPage = 100) {
+  return request('/search/repositories', {
+    q:        query,
+    sort:     'stars',
+    order:    'desc',
+    per_page: perPage,
+    page,
+  }, /* isSearch */ true);
+}
+
+/**
  * Recursive git tree for a repo.
  * Returns { tree: [{path, type, size}], truncated }.
  */

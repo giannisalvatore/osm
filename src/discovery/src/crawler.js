@@ -1,23 +1,24 @@
 /**
  * Discovery crawler.
  *
- * Uses GET /search/code?q=filename:SKILL.md
+ * Uses GET /search/repositories?q=skill+created:YYYY-MM-DD..YYYY-MM-DD
  *
- * The code search API returns individual file results (each containing path,
- * sha, and a partial repository object). We group results by repository,
- * fetch full repo metadata (stars, license, default_branch) via getRepo(),
- * and import each discovered SKILL.md.
+ * Searches for repositories containing "skill" keyword, segmented by creation date
+ * to bypass GitHub's 1000-result-per-query limit. Each date segment is a separate
+ * query with its own 1000-result allowance.
  *
  * Algorithm per cycle
  * ───────────────────
- *  1. Fetch page N (30 code results at a time).
- *  2. Group files by repository.
- *  3. For each repository:
- *     a. Fetch full repo metadata (stars, license, default_branch).
- *     b. Gate on license.
- *     c. Import each SKILL.md found in that repo.
- *     d. Mark repo as done.
- *  4. Advance to next page; when exhausted wait IDLE_WAIT_MS and restart.
+ *  1. For each day in DAYS_TO_SCAN:
+ *     a. Search repos created on that day (up to 1000 results = 10 pages × 100).
+ *     b. For each repository found:
+ *        - Check if already analyzed (skip if yes).
+ *        - Fetch full repo metadata (stars, license, default_branch).
+ *        - Gate on license.
+ *        - Scan tree for SKILL.md files.
+ *        - Import each SKILL.md found.
+ *        - Mark repo as analyzed.
+ *  2. After scanning all days, wait IDLE_WAIT_MS and restart.
  *
  * Rate limits
  * ───────────
@@ -25,7 +26,7 @@
  *  Core API (getRepo + file downloads): self-throttled via X-RateLimit-* headers.
  */
 
-import { searchCode, getRepo, getTree, sleep } from './github.js';
+import { searchRepositories, getRepo, getTree, sleep } from './github.js';
 import { isLicenseAllowed }                    from './license.js';
 import { importSkill }                         from './importer.js';
 import { DiscoveredRepo }                      from './db.js';
@@ -38,11 +39,13 @@ const SEED_REPOS = [
 ];
 
 // ── Tuning ────────────────────────────────────────────────────────────────────
-const PER_PAGE        = 30;              // code results per search page
-const SEARCH_DELAY_MS = 1000;           // gap between search page requests
-const SKILL_DELAY_MS  = 50;             // gap between skill imports within a repo
+const PER_PAGE        = 100;             // results per page (max allowed)
+const MAX_PAGE        = 10;              // max 10 pages per date range (1000 results)
+const SEARCH_DELAY_MS = 2000;            // gap between search page requests
+const SKILL_DELAY_MS  = 50;              // gap between skill imports within a repo
 const REPO_DELAY_MS   = 100;             // gap between repos on the same page
-const IDLE_WAIT_MS    = 5 * 60 * 1000;  // wait after no new repos found (5 min)
+const IDLE_WAIT_MS    = 5 * 60 * 1000;   // wait after finishing all date segments (5 min)
+const DAYS_TO_SCAN    = 365;             // how many days back to scan
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -74,25 +77,16 @@ async function markAnalyzed(repoFullName, stars, skillsFound) {
 // ── Process a single repo ─────────────────────────────────────────────────────
 
 /**
- * Process a repository and import all the given SKILL.md files.
+ * Process a repository: scan for SKILL.md files and import them.
  *
- * @param {string} repoFullName   e.g. "octocat/hello-world"
- * @param {Array} skillFiles      [{path, sha}, ...] from code search results
+ * @param {Object} repoInfo   Full repository object from GitHub API
  */
-async function processRepo(repoFullName, skillFiles) {
+async function processRepo(repoInfo) {
+  const repoFullName = repoInfo.full_name;
+  
   // Already analyzed?
   const already = await DiscoveredRepo.findOne({ where: { repo_full_name: repoFullName } });
   if (already) return;
-
-  // Fetch full repository metadata (stars, license, default_branch)
-  let repoInfo;
-  try {
-    repoInfo = await getRepo(repoFullName);
-  } catch (err) {
-    console.error(`[crawler] Could not fetch ${repoFullName}: ${err.message}`);
-    await markAnalyzed(repoFullName, 0, 0);
-    return;
-  }
 
   const stars = repoInfo.stargazers_count ?? 0;
   console.log(`[crawler] → ${repoFullName} (★${stars})`);
@@ -105,13 +99,30 @@ async function processRepo(repoFullName, skillFiles) {
     return;
   }
 
-  console.log(`[crawler]   found ${skillFiles.length} SKILL.md file(s) — importing…`);
+  // Scan repository tree for SKILL.md files
+  let skillPaths = [];
+  let tree = null;
+  try {
+    tree = await getTree(repoFullName, repoInfo.default_branch);
+    skillPaths = findSkillMdPaths(tree);
+  } catch (err) {
+    console.log(`[crawler]   warning — tree unavailable: ${err.message}`);
+    await markAnalyzed(repoFullName, stars, 0);
+    return;
+  }
+
+  if (skillPaths.length === 0) {
+    console.log(`[crawler]   no SKILL.md found`);
+    await markAnalyzed(repoFullName, stars, 0);
+    return;
+  }
+
+  console.log(`[crawler]   found ${skillPaths.length} SKILL.md file(s) — importing…`);
 
   let imported = 0;
-  for (const { path: skillPath, sha: skillMdSha } of skillFiles) {
+  for (const { path: skillPath, sha: skillMdSha } of skillPaths) {
     try {
-      // Pass null for repoTree since we don't have it (code search doesn't provide tree)
-      const name = await importSkill(repoFullName, skillPath, repoInfo, null, skillMdSha);
+      const name = await importSkill(repoFullName, skillPath, repoInfo, tree, skillMdSha);
       if (name) imported++;
     } catch (err) {
       console.error(`[crawler]   error importing ${skillPath}: ${err.message}`);
@@ -120,7 +131,7 @@ async function processRepo(repoFullName, skillFiles) {
   }
 
   await markAnalyzed(repoFullName, stars, imported);
-  console.log(`[crawler]   ✓ ${repoFullName} — ${imported}/${skillFiles.length} skill(s) imported`);
+  console.log(`[crawler]   ✓ ${repoFullName} — ${imported}/${skillPaths.length} skill(s) imported`);
 }
 
 // ── Main loop ─────────────────────────────────────────────────────────────────
@@ -185,77 +196,74 @@ async function runSeeds() {
 
 // ── Main crawler loop ─────────────────────────────────────────────────────────
 
+/**
+ * Generate date range for a specific day offset from today.
+ * @param {number} daysAgo - Number of days before today
+ * @returns {string} Date range query string "YYYY-MM-DD..YYYY-MM-DD"
+ */
+function getDateRange(daysAgo) {
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  const dateStr = date.toISOString().split('T')[0];
+  return `${dateStr}..${dateStr}`;
+}
+
 export async function runCrawler() {
   console.log('[crawler] Starting OSM discovery crawler…');
   console.log('[crawler] GitHub token:', process.env.GITHUB_TOKEN ? 'present ✓' : 'missing ✗ (60 req/h limit)');
+  console.log(`[crawler] Strategy: scan repositories by creation date (last ${DAYS_TO_SCAN} days)`);
 
   // ── Seed repos first ──────────────────────────────────────────────────────
   await runSeeds();
 
-  let page = 1;
-
   while (true) {
-    let result;
-    try {
-      console.log(`[crawler] Fetching page ${page} (${PER_PAGE} code results)…`);
-      result = await searchCode(page, PER_PAGE);
-    } catch (err) {
-      console.error(`[crawler] Search error: ${err.message} — retrying in 30s`);
-      await sleep(30_000);
-      continue;
-    }
+    // Iterate through each day segment
+    for (let dayOffset = 0; dayOffset < DAYS_TO_SCAN; dayOffset++) {
+      const dateRange = getDateRange(dayOffset);
+      console.log(`\n[crawler] ═══ Scanning day ${dayOffset + 1}/${DAYS_TO_SCAN}: ${dateRange} ═══`);
 
-    const items = result.items ?? [];
-    console.log(`[crawler] Page ${page}: ${items.length} file(s) (GitHub total: ${result.total_count})`);
+      // Paginate through results for this date range (up to 10 pages = 1000 results)
+      for (let page = 1; page <= MAX_PAGE; page++) {
+        let result;
+        try {
+          result = await searchRepositories(`skill created:${dateRange}`, page, PER_PAGE);
+        } catch (err) {
+          console.error(`[crawler] Search error: ${err.message} — retrying in 30s`);
+          await sleep(30_000);
+          page--; // Retry same page
+          continue;
+        }
 
-    if (items.length === 0) {
-      console.log(`[crawler] No results. Waiting ${IDLE_WAIT_MS / 60_000} min before restarting…`);
-      page = 1;
-      await sleep(IDLE_WAIT_MS);
-      continue;
-    }
+        const items = result.items ?? [];
+        console.log(`[crawler] Page ${page}/${MAX_PAGE}: ${items.length} repo(s) (total: ${result.total_count})`);
 
-    // Group files by repository
-    const repoMap = new Map(); // fullName → [{path, sha}, ...]
-    for (const item of items) {
-      const fullName = item.repository?.full_name;
-      if (!fullName) continue;
-      if (!repoMap.has(fullName)) {
-        repoMap.set(fullName, []);
+        if (items.length === 0) break; // No more results for this date
+
+        // Process each repository
+        let newCount = 0;
+        for (const repo of items) {
+          try {
+            const already = await DiscoveredRepo.findOne({ where: { repo_full_name: repo.full_name } });
+            if (!already) newCount++;
+            await processRepo(repo);
+          } catch (err) {
+            console.error(`[crawler] Unhandled error for ${repo.full_name}: ${err.message}`);
+            await markAnalyzed(repo.full_name, 0, 0);
+          }
+          await sleep(REPO_DELAY_MS);
+        }
+
+        console.log(`[crawler] Page ${page}: ${newCount} new repo(s)`);
+
+        // Stop if we got fewer results than requested (last page)
+        if (items.length < PER_PAGE) break;
+
+        await sleep(SEARCH_DELAY_MS);
       }
-      repoMap.get(fullName).push({
-        path: item.path,
-        sha:  item.sha ?? null,
-      });
     }
 
-    console.log(`[crawler] Page ${page}: ${repoMap.size} unique repo(s)`);
-
-    // Process each unique repository
-    let newOnThisPage = 0;
-    for (const [fullName, skillFiles] of repoMap.entries()) {
-      try {
-        const before = await DiscoveredRepo.findOne({ where: { repo_full_name: fullName } });
-        if (!before) newOnThisPage++;
-        await processRepo(fullName, skillFiles);
-      } catch (err) {
-        console.error(`[crawler] Unhandled error for ${fullName}: ${err.message}`);
-        await markAnalyzed(fullName, 0, 0);
-      }
-      await sleep(REPO_DELAY_MS);
-    }
-
-    console.log(`[crawler] Page ${page}: ${newOnThisPage} new repo(s) processed.`);
-
-    // Last page → cycle complete, wait and restart
-    if (items.length < PER_PAGE) {
-      console.log(`[crawler] All pages exhausted. Waiting ${IDLE_WAIT_MS / 60_000} min before restarting…`);
-      page = 1;
-      await sleep(IDLE_WAIT_MS);
-      continue;
-    }
-
-    page++;
-    await sleep(SEARCH_DELAY_MS);
+    // Completed full cycle through all days
+    console.log(`\n[crawler] ✓ Completed scan of ${DAYS_TO_SCAN} days. Waiting ${IDLE_WAIT_MS / 60_000} min before restarting…`);
+    await sleep(IDLE_WAIT_MS);
   }
 }
